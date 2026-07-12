@@ -31,7 +31,7 @@ class LocationCollector(
         val client = LocationServices.getFusedLocationProviderClient(context)
 
         val cancellation = CancellationTokenSource()
-        val location = suspendCancellableCoroutine { cont ->
+        val location = suspendCancellableCoroutine<android.location.Location?> { cont ->
             cont.invokeOnCancellation { cancellation.cancel() }
             client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellation.token)
                 .addOnSuccessListener { cont.resume(it) }
