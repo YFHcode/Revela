@@ -29,6 +29,7 @@ fun HomeScreen(
     container: AppContainer,
     onOpenDashboard: () -> Unit,
     onOpenInsights: () -> Unit,
+    onOpenModes: () -> Unit,
     onOpenChat: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenDebugLog: () -> Unit,
@@ -87,6 +88,9 @@ fun HomeScreen(
         }
         Button(onClick = onOpenInsights, modifier = Modifier.fillMaxWidth()) {
             Text("Insights")
+        }
+        Button(onClick = onOpenModes, modifier = Modifier.fillMaxWidth()) {
+            Text("Modes")
         }
         if (container.llmConfig.active) {
             Button(onClick = onOpenChat, modifier = Modifier.fillMaxWidth()) {

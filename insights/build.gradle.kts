@@ -31,4 +31,6 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Real org.json on the unit-test classpath (the android.jar stub throws).
+    testImplementation(libs.json)
 }

@@ -121,9 +121,12 @@ interface TrackedEntityDao {
     @Query("DELETE FROM place_daily WHERE place_id = :id")
     suspend fun deletePlaceDaily(id: Long)
 
-    /** Exact match on the single-entity form "[id]" (avoids 5 matching 15/51). */
-    @Query("DELETE FROM insights WHERE entity_ids = '[' || :id || ']'")
+    /** entity_ids uses a ",id,id," sentinel form so LIKE matches whole ids only. */
+    @Query("DELETE FROM insights WHERE entity_ids LIKE '%,' || :id || ',%'")
     suspend fun deleteInsightsFor(id: Long)
+
+    @Query("DELETE FROM modes WHERE member_ids LIKE '%,' || :id || ',%'")
+    suspend fun deleteModesFor(id: Long)
 
     @Query("DELETE FROM entities WHERE id = :id")
     suspend fun deleteEntity(id: Long)
@@ -151,6 +154,31 @@ interface PlaceDailyDao {
 
     @Query("SELECT * FROM place_daily ORDER BY date")
     suspend fun all(): List<PlaceDailyEntity>
+}
+
+@Dao
+interface ModeDao {
+    @Insert
+    suspend fun insert(mode: ModeEntity): Long
+
+    @Query("SELECT * FROM modes WHERE dedupe_key = :key LIMIT 1")
+    suspend fun byDedupeKey(key: String): ModeEntity?
+
+    @Query("UPDATE modes SET llm_name = :name, llm_desc = :desc WHERE id = :id")
+    suspend fun setLlm(id: Long, name: String, desc: String)
+
+    @Query("SELECT * FROM modes ORDER BY strength DESC")
+    fun all(): Flow<List<ModeEntity>>
+
+    @Query("SELECT * FROM modes WHERE llm_name IS NULL ORDER BY strength DESC LIMIT :limit")
+    suspend fun needingNaming(limit: Int): List<ModeEntity>
+
+    /** Remove modes whose member set is no longer detected (keeps the table current). */
+    @Query("DELETE FROM modes WHERE dedupe_key NOT IN (:keepKeys)")
+    suspend fun deleteNotIn(keepKeys: List<String>)
+
+    @Query("DELETE FROM modes")
+    suspend fun clear()
 }
 
 @Dao

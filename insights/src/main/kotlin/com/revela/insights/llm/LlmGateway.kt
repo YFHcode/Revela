@@ -32,6 +32,13 @@ class LlmGateway(
 
             /** Rows from a whitelisted read-only query over rollup tables. */
             fun queryResult(rowsJson: String) = LlmSafePayload(rowsJson)
+
+            /** A community's pseudonym-safe member summary + time signature (no names). */
+            fun modeContext(memberSummary: String, timeSignature: String) =
+                LlmSafePayload("Members: $memberSummary\nWhen: $timeSignature")
+
+            /** A catalog of name-free daily series the model may propose pairings over. */
+            fun seriesCatalog(catalog: String) = LlmSafePayload(catalog)
         }
     }
 

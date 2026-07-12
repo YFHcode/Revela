@@ -55,7 +55,7 @@ class PlaceEngine(
                 """"weekend_share":${share.r2()}}""",
             text = "${ref.label} is mostly a weekend place for you — " +
                 "${weekendCount} of your ${present.size} visits fell on weekends.",
-            entityIds = "[${ref.placeId}]",
+            entityIds = ",${ref.placeId},",
         )
     }
 

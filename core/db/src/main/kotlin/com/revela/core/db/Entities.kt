@@ -93,6 +93,26 @@ data class PlaceDailyEntity(
     @ColumnInfo(name = "dwell_seconds") val dwellSeconds: Int,
 )
 
+/**
+ * A recurring "mode" — a community from graph detection (§8.10/§11). Derived,
+ * rebuilt each analysis run. The LLM names/describes it (llm_name/llm_desc);
+ * template_name is the always-present on-device fallback.
+ */
+@Entity(tableName = "modes", indices = [Index(value = ["dedupe_key"], unique = true)])
+data class ModeEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "dedupe_key") val dedupeKey: String,
+    /** JSON array of member entity ids. */
+    @ColumnInfo(name = "member_ids") val memberIds: String,
+    /** On-device human summary of members (app labels + role placeholders). */
+    @ColumnInfo(name = "member_summary") val memberSummary: String,
+    @ColumnInfo(name = "time_signature") val timeSignature: String,
+    @ColumnInfo(name = "template_name") val templateName: String,
+    val strength: Double,
+    @ColumnInfo(name = "llm_name") val llmName: String? = null,
+    @ColumnInfo(name = "llm_desc") val llmDesc: String? = null,
+)
+
 /** Reconstructed app sessions (§6.2). Derived — rebuilt by rollups. */
 @Entity(
     tableName = "sessions",

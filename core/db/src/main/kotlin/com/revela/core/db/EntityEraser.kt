@@ -17,6 +17,7 @@ class EntityEraser(private val db: RevelaDatabase) {
             dao.deleteComms(id)
             dao.deletePlaceDaily(id)
             dao.deleteInsightsFor(id)
+            dao.deleteModesFor(id)
             dao.deleteEntity(id)
         }
     }

@@ -19,8 +19,10 @@ import com.revela.core.db.RoomEventLog
 import com.revela.insights.AnalysisRunner
 import com.revela.insights.InsightsGraph
 import com.revela.insights.InsightsScheduler
+import com.revela.insights.llm.HypothesisProposer
 import com.revela.insights.llm.LlmConfig
 import com.revela.insights.llm.LlmGateway
+import com.revela.insights.llm.ModeNamer
 import com.revela.insights.llm.OpenAiNarrator
 import com.revela.insights.llm.QueryEngine
 import com.revela.pipeline.PipelineGraph
@@ -81,6 +83,8 @@ class AppContainer(context: Context) {
                 db = database,
                 appLabel = ::appLabel,
                 narrator = OpenAiNarrator(llmGateway, llmConfig),
+                modeNamer = ModeNamer(llmGateway, llmConfig),
+                hypothesisProposer = HypothesisProposer(llmGateway, llmConfig),
             ),
         )
     }

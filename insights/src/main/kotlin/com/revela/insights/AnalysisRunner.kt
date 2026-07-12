@@ -21,6 +21,8 @@ import com.revela.core.db.DaySummaryEntity
 import com.revela.core.db.EntityKind
 import com.revela.core.db.RevelaDatabase
 import com.revela.core.model.DayKeys
+import com.revela.insights.llm.HypothesisProposer
+import com.revela.insights.llm.ModeNamer
 import com.revela.insights.llm.OpenAiNarrator
 import org.json.JSONArray
 import java.time.Instant
@@ -36,6 +38,8 @@ class AnalysisRunner(
     private val db: RevelaDatabase,
     private val appLabel: (String) -> String,
     private val narrator: OpenAiNarrator? = null,
+    private val modeNamer: ModeNamer? = null,
+    private val hypothesisProposer: HypothesisProposer? = null,
     private val zone: () -> ZoneId = { ZoneId.systemDefault() },
 ) {
 
@@ -83,8 +87,11 @@ class AnalysisRunner(
                 CrossStreamSeries.HourRow(it.date, it.hour, it.totalSeconds)
             },
         )
+        // The LLM may PROPOSE extra pairs to test; the FDR-controlled engine
+        // still decides what is real (LLM contributes, statistics dispose).
+        val proposedPairs = hypothesisProposer?.propose(DefaultCandidatePairs.pairs).orEmpty()
         val crossDrafts = CrossStreamEngine()
-            .generate(crossSeries, DefaultCandidatePairs.pairs, todayKey, now)
+            .generate(crossSeries, DefaultCandidatePairs.pairs + proposedPairs, todayKey, now)
 
         // §8.4 routines from app-open bursts.
         val bursts = Bursts.build(
@@ -119,10 +126,22 @@ class AnalysisRunner(
                     ?.let { db.insightDao().setLlmText(insight.id, it) }
             }
         }
+
+        // §11 — build the life-graph, detect modes (statistics), then let the
+        // LLM name a few (interpretation only). Member summaries are
+        // pseudonym-safe: no contact/place names leave the device (D4).
+        ModeBuilder(db, appLabel).runOnce(zoneId)
+        modeNamer?.let { namer ->
+            for (mode in db.modeDao().needingNaming(MODE_NAMING_BATCH)) {
+                namer.name(mode.memberSummary, mode.timeSignature)
+                    ?.let { db.modeDao().setLlm(mode.id, it.name, it.description) }
+            }
+        }
     }
 
     private companion object {
         const val NARRATION_BATCH = 5
+        const val MODE_NAMING_BATCH = 3
         val NAME_BEARING_TYPES = setOf(
             InsightTypes.COMMS_TIMING,
             InsightTypes.RELATIONSHIP_DRIFT,

@@ -10,6 +10,24 @@ milestone breakdown.
 
 ## Status
 
+**Milestone M7** — knowledge graph, modes, and an LLM that contributes to analysis:
+
+- Life-graph over entities (apps, contacts, places) with co-occurrence edges,
+  stored as plain tables in the existing SQLite (no graph DB — see PLAN.md Q1)
+- **Louvain community detection** (pure JVM, deterministic, tested) finds
+  recurring "modes"; a Modes screen shows them with their time signature
+- **LLM contributes to analysis, without doing discovery** (respects the
+  brief's hard rule):
+  - *Mode naming* (L2): statistics find a community, the LLM names and
+    describes it from a pseudonym-safe summary ("Weekend mornings: running
+    app + a place")
+  - *Hypothesis proposal*: the LLM proposes extra (driver → outcome, lag)
+    pairs to test from a name-free series catalog; the FDR-controlled
+    cross-stream engine still decides what's real, so the LLM widens the
+    search but can never fabricate a finding (validation is unit-tested)
+- Privacy preserved: only name-free / pseudonym-safe material reaches the
+  cloud; modes cascade-delete with their member entities
+
 **Milestone M6** — Phase 2: communication timing, places, calendar:
 
 - Three new optional, independently-grantable capture sources:

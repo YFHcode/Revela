@@ -67,7 +67,7 @@ class CommsEngine(
             text = "Most of your back-and-forth with ${ref.label} happens between " +
                 "${clock(bandStart)} and ${clock(bandEnd)} — " +
                 "${(bandShare * 100).roundToInt()}% of it, across ${days.size} active days.",
-            entityIds = "[${ref.contactId}]",
+            entityIds = ",${ref.contactId},",
         )
     }
 
@@ -97,7 +97,7 @@ class CommsEngine(
                 """"effect_size":${change.effectSize.r2()}}""",
             text = "You're in touch with ${ref.label} $direction than you used to be — " +
                 "around $afterR times a week lately, versus about $beforeR before.",
-            entityIds = "[${ref.contactId}]",
+            entityIds = ",${ref.contactId},",
         )
     }
 

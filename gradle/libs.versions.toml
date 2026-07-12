@@ -35,6 +35,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+json = { group = "org.json", name = "json", version = "20240303" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

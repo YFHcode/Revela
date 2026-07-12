@@ -16,8 +16,9 @@ import androidx.room.RoomDatabase
         LlmAuditEntity::class,
         CommsDailyEntity::class,
         PlaceDailyEntity::class,
+        ModeEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class RevelaDatabase : RoomDatabase() {
@@ -32,4 +33,5 @@ abstract class RevelaDatabase : RoomDatabase() {
     abstract fun llmAuditDao(): LlmAuditDao
     abstract fun commsDailyDao(): CommsDailyDao
     abstract fun placeDailyDao(): PlaceDailyDao
+    abstract fun modeDao(): ModeDao
 }
