@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -22,8 +23,11 @@ android {
     }
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
+room {
+    // The Room Gradle plugin gives each build variant its own schema output
+    // and merges safely — writing one shared dir from the KSP arg races when
+    // debug/release KSP tasks run in parallel ("Empty schema file").
+    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
