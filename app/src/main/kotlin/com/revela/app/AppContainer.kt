@@ -2,7 +2,6 @@ package com.revela.app
 
 import android.content.Context
 import android.content.Intent
-import androidx.room.withTransaction
 import com.revela.capture.AndroidUsageEventSource
 import com.revela.capture.CalendarCollector
 import com.revela.capture.CaptureGraph
@@ -93,14 +92,7 @@ class AppContainer(context: Context) {
 
     /** Full removal of one contact/place (D6): events, rollups, insights, entity. */
     suspend fun deleteEntity(id: Long) {
-        database.withTransaction {
-            val dao = database.trackedEntityDao()
-            dao.deleteEvents(id)
-            dao.deleteComms(id)
-            dao.deletePlaceDaily(id)
-            dao.deleteInsightsFor(id)
-            dao.deleteEntity(id)
-        }
+        com.revela.core.db.EntityEraser(database).erase(id)
     }
 
     /**
