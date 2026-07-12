@@ -44,6 +44,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:db"))
     implementation(project(":capture"))
+    implementation(project(":pipeline"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

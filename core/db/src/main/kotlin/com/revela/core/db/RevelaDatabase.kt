@@ -9,8 +9,12 @@ import androidx.room.RoomDatabase
         WatermarkEntity::class,
         TrackedEntity::class,
         InsightEntity::class,
+        SessionEntity::class,
+        UsageHourlyEntity::class,
+        UsageDailyEntity::class,
+        DaySummaryEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class RevelaDatabase : RoomDatabase() {
@@ -18,4 +22,8 @@ abstract class RevelaDatabase : RoomDatabase() {
     abstract fun watermarkDao(): WatermarkDao
     abstract fun trackedEntityDao(): TrackedEntityDao
     abstract fun insightDao(): InsightDao
+    abstract fun sessionDao(): SessionDao
+    abstract fun usageHourlyDao(): UsageHourlyDao
+    abstract fun usageDailyDao(): UsageDailyDao
+    abstract fun daySummaryDao(): DaySummaryDao
 }

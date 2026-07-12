@@ -19,6 +19,54 @@ interface EventDao {
 
     @Query("SELECT MIN(ts) FROM events")
     fun oldestTs(): Flow<Long?>
+
+    @Query("SELECT * FROM events ORDER BY ts")
+    suspend fun allOrdered(): List<EventEntity>
+}
+
+@Dao
+interface SessionDao {
+    @Insert
+    suspend fun insertAll(sessions: List<SessionEntity>)
+
+    @Query("DELETE FROM sessions")
+    suspend fun clear()
+}
+
+@Dao
+interface UsageHourlyDao {
+    @Insert
+    suspend fun insertAll(rows: List<UsageHourlyEntity>)
+
+    @Query("DELETE FROM usage_hourly")
+    suspend fun clear()
+
+    @Query("SELECT * FROM usage_hourly WHERE date >= :minDate")
+    fun since(minDate: String): Flow<List<UsageHourlyEntity>>
+}
+
+@Dao
+interface UsageDailyDao {
+    @Insert
+    suspend fun insertAll(rows: List<UsageDailyEntity>)
+
+    @Query("DELETE FROM usage_daily")
+    suspend fun clear()
+
+    @Query("SELECT * FROM usage_daily WHERE date = :date ORDER BY total_seconds DESC LIMIT :limit")
+    fun topForDate(date: String, limit: Int): Flow<List<UsageDailyEntity>>
+}
+
+@Dao
+interface DaySummaryDao {
+    @Insert
+    suspend fun insertAll(rows: List<DaySummaryEntity>)
+
+    @Query("DELETE FROM day_summary")
+    suspend fun clear()
+
+    @Query("SELECT * FROM day_summary ORDER BY date DESC LIMIT :limit")
+    fun recent(limit: Int): Flow<List<DaySummaryEntity>>
 }
 
 @Dao

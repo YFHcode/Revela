@@ -4,8 +4,14 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.revela.core.model.AppSession
 import com.revela.core.model.CollectorSource
+import com.revela.core.model.DailyUsage
+import com.revela.core.model.DaySummary
+import com.revela.core.model.DayType
 import com.revela.core.model.EventType
+import com.revela.core.model.HourlyUsage
+import com.revela.core.model.PickupType
 import com.revela.core.model.RawEvent
 
 /** Raw event log (§6.1). Append-only: rows are never updated. */
@@ -24,6 +30,15 @@ data class EventEntity(
 )
 
 fun RawEvent.toEntity() = EventEntity(
+    ts = ts,
+    type = type,
+    appPkg = appPkg,
+    entityId = entityId,
+    payload = payload,
+    source = source,
+)
+
+fun EventEntity.toRaw() = RawEvent(
     ts = ts,
     type = type,
     appPkg = appPkg,
@@ -51,6 +66,79 @@ data class TrackedEntity(
 )
 
 enum class EntityKind { APP, CONTACT, PLACE, TOPIC }
+
+/** Reconstructed app sessions (§6.2). Derived — rebuilt by rollups. */
+@Entity(
+    tableName = "sessions",
+    indices = [Index("day_key"), Index("start_ts")],
+)
+data class SessionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "day_key") val dayKey: String,
+    @ColumnInfo(name = "app_pkg") val appPkg: String,
+    @ColumnInfo(name = "start_ts") val startTs: Long,
+    @ColumnInfo(name = "end_ts") val endTs: Long,
+    @ColumnInfo(name = "duration_s") val durationS: Int,
+    @ColumnInfo(name = "pickup_type") val pickupType: PickupType,
+)
+
+fun AppSession.toEntity() = SessionEntity(
+    dayKey = dayKey,
+    appPkg = appPkg,
+    startTs = startTs,
+    endTs = endTs,
+    durationS = durationS,
+    pickupType = pickupType,
+)
+
+/** Per-app seconds by calendar date + hour (heatmap source). Derived. */
+@Entity(tableName = "usage_hourly", primaryKeys = ["date", "hour", "app_pkg"])
+data class UsageHourlyEntity(
+    val date: String,
+    val hour: Int,
+    @ColumnInfo(name = "app_pkg") val appPkg: String,
+    @ColumnInfo(name = "total_seconds") val totalSeconds: Int,
+    @ColumnInfo(name = "open_count") val openCount: Int,
+)
+
+fun HourlyUsage.toEntity() = UsageHourlyEntity(date, hour, appPkg, totalSeconds, openCount)
+
+/** Per-app totals by behavioral day. Derived. */
+@Entity(tableName = "usage_daily", primaryKeys = ["date", "app_pkg"])
+data class UsageDailyEntity(
+    val date: String,
+    @ColumnInfo(name = "app_pkg") val appPkg: String,
+    @ColumnInfo(name = "total_seconds") val totalSeconds: Int,
+    @ColumnInfo(name = "open_count") val openCount: Int,
+    @ColumnInfo(name = "first_use") val firstUse: Long,
+    @ColumnInfo(name = "last_use") val lastUse: Long,
+)
+
+fun DailyUsage.toEntity() = UsageDailyEntity(dayKey, appPkg, totalSeconds, openCount, firstUse, lastUse)
+
+/** One row per behavioral day. Derived. */
+@Entity(tableName = "day_summary")
+data class DaySummaryEntity(
+    @PrimaryKey val date: String,
+    @ColumnInfo(name = "first_unlock") val firstUnlock: Long?,
+    @ColumnInfo(name = "last_use") val lastUse: Long?,
+    @ColumnInfo(name = "total_screen_time_s") val totalScreenTimeS: Int,
+    @ColumnInfo(name = "pickup_count") val pickupCount: Int,
+    @ColumnInfo(name = "reflex_check_count") val reflexCheckCount: Int,
+    @ColumnInfo(name = "day_type") val dayType: DayType,
+    @ColumnInfo(name = "zone_id") val zoneId: String,
+)
+
+fun DaySummary.toEntity() = DaySummaryEntity(
+    date = dayKey,
+    firstUnlock = firstUnlock,
+    lastUse = lastUse,
+    totalScreenTimeS = totalScreenTimeS,
+    pickupCount = pickupCount,
+    reflexCheckCount = reflexCheckCount,
+    dayType = dayType,
+    zoneId = zoneId,
+)
 
 /** Discovered patterns surfaced to the user (§6.4). */
 @Entity(

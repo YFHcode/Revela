@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -24,7 +25,12 @@ import com.revela.app.AppContainer
 import com.revela.capture.Permissions
 
 @Composable
-fun HomeScreen(container: AppContainer, onOpenDebugLog: () -> Unit) {
+fun HomeScreen(
+    container: AppContainer,
+    onOpenDashboard: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenDebugLog: () -> Unit,
+) {
     val context = LocalContext.current
     val settings = container.settings
     val eventCount by container.database.eventDao().count()
@@ -65,10 +71,26 @@ fun HomeScreen(container: AppContainer, onOpenDebugLog: () -> Unit) {
                     Text("Baseline established", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "The dashboard and insights feed arrive in the next milestone.",
+                        "Your rhythms are visible in the dashboard. The insights feed " +
+                            "arrives in the next milestone.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
+            }
+        }
+
+        if (settings.dashboardUnlocked()) {
+            Button(onClick = onOpenDashboard, modifier = Modifier.fillMaxWidth()) {
+                Text("Dashboard")
+            }
+        } else {
+            Card {
+                Text(
+                    "The dashboard unlocks after day ${com.revela.app.SettingsStore.DASHBOARD_UNLOCK_DAYS} " +
+                        "of observation.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(16.dp),
+                )
             }
         }
 
@@ -85,8 +107,10 @@ fun HomeScreen(container: AppContainer, onOpenDebugLog: () -> Unit) {
         }
 
         Spacer(Modifier.weight(1f))
-        TextButton(onClick = onOpenDebugLog) {
-            Text("Raw event log (debug)")
+        Row {
+            TextButton(onClick = onOpenSettings) { Text("Settings") }
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onOpenDebugLog) { Text("Raw log (debug)") }
         }
     }
 }

@@ -10,6 +10,20 @@ milestone breakdown.
 
 ## Status
 
+**Milestone M2** — rollups + dashboard v0:
+
+- Session reconstruction from the raw log (foreground/background pairing,
+  screen-off closing, 6h data-gap clamp), pickup detection, and sub-15s
+  "reflex check" tagging — all in a pure-JVM processor with unit tests
+- Idempotent rollup pass (WorkManager, charging-constrained periodic +
+  on-demand) into `sessions`, `usage_hourly`, `usage_daily`, `day_summary`,
+  with the 4 a.m. behavioral-day boundary rule
+- Dashboard v0: stat tiles (screen time, pickups, reflex checks, first
+  unlock / last use), 7-day screen-time bars, hour×weekday usage heatmap,
+  today's top apps
+- Settings v0: pause observation, full wipe (with confirmation), developer
+  mode (bypasses the quiet window for dogfooding)
+
 **Milestone M1** — skeleton + storage + capture:
 
 - Multi-module Gradle project (Kotlin, Jetpack Compose)

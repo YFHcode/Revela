@@ -10,6 +10,8 @@ import com.revela.app.AppContainer
 sealed interface Screen {
     data object Onboarding : Screen
     data object Home : Screen
+    data object Dashboard : Screen
+    data object Settings : Screen
     data object DebugLog : Screen
 }
 
@@ -26,7 +28,17 @@ fun RevelaRoot(container: AppContainer) {
         )
         Screen.Home -> HomeScreen(
             container = container,
+            onOpenDashboard = { screen = Screen.Dashboard },
+            onOpenSettings = { screen = Screen.Settings },
             onOpenDebugLog = { screen = Screen.DebugLog },
+        )
+        Screen.Dashboard -> DashboardScreen(
+            container = container,
+            onBack = { screen = Screen.Home },
+        )
+        Screen.Settings -> SettingsScreen(
+            container = container,
+            onBack = { screen = Screen.Home },
         )
         Screen.DebugLog -> DebugLogScreen(
             container = container,
