@@ -22,6 +22,8 @@ data class InsightDraft(
     val statPayload: String,
     /** Neutral, curious phrasing (P1). No judgment, no goals, no "wasted". */
     val text: String,
+    /** JSON array of entity ids this insight is about, so entity deletion cascades. */
+    val entityIds: String? = null,
 )
 
 object InsightTypes {
@@ -37,6 +39,11 @@ object InsightTypes {
     const val BASELINE_SNAPSHOT = "baseline_snapshot"
     const val EARLY_TOP_APPS = "early_top_apps"
     const val EARLY_CHRONOTYPE = "early_chronotype"
+
+    // Phase 2 — communication timing, places.
+    const val COMMS_TIMING = "comms_timing"
+    const val RELATIONSHIP_DRIFT = "relationship_drift"
+    const val PLACE_RHYTHM = "place_rhythm"
 }
 
 /**

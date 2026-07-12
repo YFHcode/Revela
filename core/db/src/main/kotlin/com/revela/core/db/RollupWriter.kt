@@ -19,4 +19,17 @@ class RollupWriter(private val db: RevelaDatabase) {
             db.daySummaryDao().insertAll(result.days.map { it.toEntity() })
         }
     }
+
+    /** Replace the Phase-2 rollup tables (comms + place dwell). */
+    suspend fun replacePhase2(
+        comms: List<CommsDailyEntity>,
+        places: List<PlaceDailyEntity>,
+    ) {
+        db.withTransaction {
+            db.commsDailyDao().clear()
+            db.placeDailyDao().clear()
+            db.commsDailyDao().insertAll(comms)
+            db.placeDailyDao().insertAll(places)
+        }
+    }
 }

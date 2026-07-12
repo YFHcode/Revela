@@ -14,8 +14,10 @@ import androidx.room.RoomDatabase
         UsageDailyEntity::class,
         DaySummaryEntity::class,
         LlmAuditEntity::class,
+        CommsDailyEntity::class,
+        PlaceDailyEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class RevelaDatabase : RoomDatabase() {
@@ -28,4 +30,6 @@ abstract class RevelaDatabase : RoomDatabase() {
     abstract fun usageDailyDao(): UsageDailyDao
     abstract fun daySummaryDao(): DaySummaryDao
     abstract fun llmAuditDao(): LlmAuditDao
+    abstract fun commsDailyDao(): CommsDailyDao
+    abstract fun placeDailyDao(): PlaceDailyDao
 }

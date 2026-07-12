@@ -39,7 +39,13 @@ import com.revela.pipeline.RollupScheduler
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onOpenAudit: () -> Unit) {
+fun SettingsScreen(
+    container: AppContainer,
+    onBack: () -> Unit,
+    onOpenAudit: () -> Unit,
+    onOpenSources: () -> Unit,
+    onOpenManageData: () -> Unit,
+) {
     val context = LocalContext.current
     val settings = container.settings
     var captureEnabled by remember { mutableStateOf(settings.captureEnabled) }
@@ -102,6 +108,24 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onOpenAudit: () 
                         }
                     },
                 )
+            }
+        }
+
+        Card {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Signals", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Add notification-timing, location, and calendar sources to " +
+                        "unlock relationship and place insights.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(onClick = onOpenSources, modifier = Modifier.fillMaxWidth()) {
+                    Text("Manage sources")
+                }
+                OutlinedButton(onClick = onOpenManageData, modifier = Modifier.fillMaxWidth()) {
+                    Text("Places & contacts")
+                }
             }
         }
 

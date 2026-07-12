@@ -2,9 +2,16 @@ package com.revela.app
 
 import android.content.Context
 import android.content.Intent
+import androidx.room.withTransaction
 import com.revela.capture.AndroidUsageEventSource
+import com.revela.capture.CalendarCollector
 import com.revela.capture.CaptureGraph
 import com.revela.capture.CaptureScheduler
+import com.revela.capture.ContactResolver
+import com.revela.capture.LocationCollector
+import com.revela.capture.Permissions
+import com.revela.capture.Phase2Graph
+import com.revela.capture.Phase2Scheduler
 import com.revela.capture.UsageStatsCollector
 import com.revela.core.db.DatabaseFactory
 import com.revela.core.db.DbKeyManager
@@ -42,6 +49,23 @@ class AppContainer(context: Context) {
         )
     }
 
+    val phase2Graph: Phase2Graph by lazy {
+        Phase2Graph(
+            eventLog = eventLog,
+            contactResolver = ContactResolver(database),
+            locationCollector = LocationCollector(
+                context = appContext,
+                eventLog = eventLog,
+                hasPermission = { Permissions.hasForegroundLocation(appContext) },
+            ),
+            calendarCollector = CalendarCollector(
+                context = appContext,
+                eventLog = eventLog,
+                hasPermission = { Permissions.hasCalendar(appContext) },
+            ),
+        )
+    }
+
     val pipelineGraph: PipelineGraph by lazy {
         PipelineGraph(rollupRunner = RollupRunner(database))
     }
@@ -67,6 +91,18 @@ class AppContainer(context: Context) {
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
     }.getOrDefault(pkg.substringAfterLast('.'))
 
+    /** Full removal of one contact/place (D6): events, rollups, insights, entity. */
+    suspend fun deleteEntity(id: Long) {
+        database.withTransaction {
+            val dao = database.trackedEntityDao()
+            dao.deleteEvents(id)
+            dao.deleteComms(id)
+            dao.deletePlaceDaily(id)
+            dao.deleteInsightsFor(id)
+            dao.deleteEntity(id)
+        }
+    }
+
     /**
      * Full wipe (D6): stop all work, delete the encrypted database and its
      * key, clear preferences, then restart the process into a fresh install
@@ -74,6 +110,7 @@ class AppContainer(context: Context) {
      */
     fun fullWipeAndRestart() {
         CaptureScheduler.cancel(appContext)
+        Phase2Scheduler.cancel(appContext)
         RollupScheduler.cancel(appContext)
         InsightsScheduler.cancel(appContext)
         runCatching { database.close() }

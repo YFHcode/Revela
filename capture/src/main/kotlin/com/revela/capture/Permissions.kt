@@ -1,7 +1,11 @@
 package com.revela.capture
 
+import android.Manifest
 import android.app.AppOpsManager
+import android.app.NotificationManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.PowerManager
 import android.os.Process
@@ -33,4 +37,25 @@ object Permissions {
         val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         return pm.isIgnoringBatteryOptimizations(context.packageName)
     }
+
+    /** Notification-access special grant (§5.2). */
+    fun hasNotificationAccess(context: Context): Boolean {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val component = ComponentName(context, RevelaNotificationListenerService::class.java)
+        return nm.isNotificationListenerAccessGranted(component)
+    }
+
+    fun hasForegroundLocation(context: Context): Boolean =
+        context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED ||
+            context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+
+    fun hasBackgroundLocation(context: Context): Boolean =
+        context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+
+    fun hasCalendar(context: Context): Boolean =
+        context.checkSelfPermission(Manifest.permission.READ_CALENDAR) ==
+            PackageManager.PERMISSION_GRANTED
 }

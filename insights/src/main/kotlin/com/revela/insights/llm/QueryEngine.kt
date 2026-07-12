@@ -109,8 +109,9 @@ class QueryEngine(
               total_seconds INTEGER, open_count INTEGER)
             sessions(day_key TEXT, app_pkg TEXT, start_ts INTEGER, end_ts INTEGER,
               duration_s INTEGER, pickup_type TEXT NORMAL|REFLEX)
-            insights(type TEXT, created_ts INTEGER, text TEXT, stat_payload TEXT,
-              dismissed INTEGER, pinned INTEGER)
+
+            (Communication and location data are intentionally not queryable —
+            they stay fully on-device.)
 
             Use the run_readonly_sql tool (SELECT only) to fetch what you need,
             then answer in plain language. Style: neutral and curious, never

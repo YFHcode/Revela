@@ -143,6 +143,9 @@ private fun typeLabel(type: String): String = when (type) {
     "baseline_snapshot" -> "Your baseline"
     "early_top_apps" -> "Top apps so far"
     "early_chronotype" -> "Day start"
+    "comms_timing" -> "Communication timing"
+    "relationship_drift" -> "Relationship drift"
+    "place_rhythm" -> "Place rhythm"
     else -> "Pattern"
 }
 

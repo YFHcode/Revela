@@ -4,17 +4,25 @@ import com.revela.analysis.AppDayRow
 import com.revela.analysis.Bursts
 import com.revela.analysis.CrossStreamEngine
 import com.revela.analysis.CrossStreamSeries
+import com.revela.analysis.CommsEngine
+import com.revela.analysis.ContactDay
+import com.revela.analysis.ContactRef
 import com.revela.analysis.DayRow
 import com.revela.analysis.DefaultCandidatePairs
 import com.revela.analysis.EarlyEngine
 import com.revela.analysis.InsightEngine
 import com.revela.analysis.InsightTypes
+import com.revela.analysis.PlaceDay
+import com.revela.analysis.PlaceEngine
+import com.revela.analysis.PlaceRef
 import com.revela.analysis.RoutineEngine
 import com.revela.analysis.SeriesBuilder
 import com.revela.core.db.DaySummaryEntity
+import com.revela.core.db.EntityKind
 import com.revela.core.db.RevelaDatabase
 import com.revela.core.model.DayKeys
 import com.revela.insights.llm.OpenAiNarrator
+import org.json.JSONArray
 import java.time.Instant
 import java.time.ZoneId
 
@@ -91,12 +99,22 @@ class AnalysisRunner(
             now = now,
         )
 
-        InsightWriter(db).upsertAll(baseDrafts + earlyDrafts + crossDrafts + routineDrafts, now)
+        // Phase 2 — communication timing, relationship drift, place rhythms.
+        val phase2Drafts = phase2Drafts(todayKey, zoneId, now)
+
+        InsightWriter(db).upsertAll(
+            baseDrafts + earlyDrafts + crossDrafts + routineDrafts + phase2Drafts,
+            now,
+        )
 
         // L1 narration: rewrite a few un-narrated insights per pass. Failures
         // (no key, offline, validation reject) simply leave the template.
+        // Name-bearing insight types (contacts/places) are NEVER sent to the
+        // cloud (D4) — they keep their local template wording.
         narrator?.let { n ->
-            for (insight in db.insightDao().needingNarration(NARRATION_BATCH)) {
+            val candidates = db.insightDao()
+                .needingNarration(NAME_BEARING_TYPES.toList(), NARRATION_BATCH)
+            for (insight in candidates) {
                 n.narrate(insight.type, insight.statPayload, insight.text)
                     ?.let { db.insightDao().setLlmText(insight.id, it) }
             }
@@ -105,6 +123,54 @@ class AnalysisRunner(
 
     private companion object {
         const val NARRATION_BATCH = 5
+        val NAME_BEARING_TYPES = setOf(
+            InsightTypes.COMMS_TIMING,
+            InsightTypes.RELATIONSHIP_DRIFT,
+            InsightTypes.PLACE_RHYTHM,
+        )
+    }
+
+    private suspend fun phase2Drafts(
+        todayKey: String,
+        zoneId: ZoneId,
+        now: Long,
+    ): List<com.revela.analysis.InsightDraft> {
+        val contacts = db.trackedEntityDao().byKind(EntityKind.CONTACT)
+            .associate { it.id to ContactRef(it.id, it.displayName) }
+        val places = db.trackedEntityDao().byKind(EntityKind.PLACE).associate {
+            it.id to PlaceRef(
+                placeId = it.id,
+                label = it.displayName,
+                isHomeOrWork = it.placeLabel == "HOME" || it.placeLabel == "WORK",
+            )
+        }
+
+        val drafts = mutableListOf<com.revela.analysis.InsightDraft>()
+
+        if (contacts.isNotEmpty()) {
+            val contactDays = db.commsDailyDao().all().map { row ->
+                ContactDay(
+                    dayKey = row.date,
+                    contactId = row.contactId,
+                    msgCount = row.msgNotifCount,
+                    byHour = parseHistogram(row.byHourHistogram),
+                )
+            }
+            drafts += CommsEngine().generate(contactDays, contacts, todayKey, now)
+        }
+
+        if (places.isNotEmpty()) {
+            val placeDays = db.placeDailyDao().all().map {
+                PlaceDay(it.date, it.placeId, it.dwellSeconds)
+            }
+            drafts += PlaceEngine().generate(placeDays, places, todayKey, now)
+        }
+        return drafts
+    }
+
+    private fun parseHistogram(json: String): IntArray {
+        val arr = runCatching { JSONArray(json) }.getOrNull() ?: return IntArray(24)
+        return IntArray(24) { if (it < arr.length()) arr.optInt(it) else 0 }
     }
 
     private fun minuteOfDay(day: DaySummaryEntity, zoneId: ZoneId): Double? =

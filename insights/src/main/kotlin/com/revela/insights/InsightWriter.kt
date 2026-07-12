@@ -22,6 +22,7 @@ class InsightWriter(private val db: RevelaDatabase) {
                         createdTs = now,
                         type = draft.type,
                         confidence = draft.confidence,
+                        entityIds = draft.entityIds,
                         windowStart = draft.windowStart,
                         windowEnd = draft.windowEnd,
                         statPayload = draft.statPayload,

@@ -10,6 +10,23 @@ milestone breakdown.
 
 ## Status
 
+**Milestone M6** — Phase 2: communication timing, places, calendar:
+
+- Three new optional, independently-grantable capture sources:
+  notification metadata (NotificationListenerService — timing only, message
+  bodies never stored), low-power location (FusedLocationProvider), and
+  calendar (read-only)
+- Contacts and places become first-class entities: notification senders
+  resolve to contacts; location fixes cluster (DBSCAN, on-device) into
+  significant places with home/work/other guesses you can rename
+- New insight types: communication timing per contact, relationship drift
+  (change-point over weekly frequency), and weekend-place rhythms — each
+  tested with planted fixtures + silent controls
+- Privacy: contact/place **names** never reach the cloud — name-bearing
+  insights keep local template wording, and the query whitelist is now
+  name-free numeric tables only; per-contact/place delete cascades through
+  events, rollups, and insights (D6)
+
 **Milestone M5** — LLM layer (OpenAI, optional):
 
 - `LlmGateway` — the single network chokepoint of the whole app: every

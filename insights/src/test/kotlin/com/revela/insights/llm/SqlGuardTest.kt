@@ -40,6 +40,14 @@ class SqlGuardTest {
     }
 
     @Test
+    fun `name-bearing tables are never queryable (D4)`() {
+        assertNotNull(SqlGuard.validate("SELECT text FROM insights"))
+        assertNotNull(SqlGuard.validate("SELECT * FROM comms_daily"))
+        assertNotNull(SqlGuard.validate("SELECT * FROM place_daily"))
+        assertNotNull(SqlGuard.validate("SELECT * FROM day_summary JOIN insights ON 1=1"))
+    }
+
+    @Test
     fun `tableless selects are rejected`() {
         assertNotNull(SqlGuard.validate("SELECT 1"))
     }

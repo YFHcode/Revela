@@ -24,6 +24,7 @@ android {
 dependencies {
     api(project(":core:model"))
     implementation(project(":core:db"))
+    implementation(project(":analysis"))
 
     implementation(libs.work.runtime.ktx)
     implementation(libs.kotlinx.coroutines.core)

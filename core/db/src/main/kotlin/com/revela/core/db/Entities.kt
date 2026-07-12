@@ -55,7 +55,7 @@ data class WatermarkEntity(
 )
 
 /** Apps, contacts, places, topics (§6.3). */
-@Entity(tableName = "entities")
+@Entity(tableName = "entities", indices = [Index("kind")])
 data class TrackedEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val kind: EntityKind,
@@ -63,9 +63,35 @@ data class TrackedEntity(
     /** JSON array of alternate names/identifiers. */
     val aliases: String? = null,
     val metadata: String? = null,
+    // PLACE geometry (null for other kinds); cluster centroid.
+    @ColumnInfo(name = "place_lat") val placeLat: Double? = null,
+    @ColumnInfo(name = "place_lon") val placeLon: Double? = null,
+    /** HOME | WORK | OTHER guess, user-overridable. */
+    @ColumnInfo(name = "place_label") val placeLabel: String? = null,
 )
 
 enum class EntityKind { APP, CONTACT, PLACE, TOPIC }
+
+/** Per-day messaging with a contact (§6.2, Phase 2). Derived — rebuilt by rollups. */
+@Entity(tableName = "comms_daily", primaryKeys = ["date", "contact_id", "app_pkg"])
+data class CommsDailyEntity(
+    val date: String,
+    @ColumnInfo(name = "contact_id") val contactId: Long,
+    @ColumnInfo(name = "app_pkg") val appPkg: String,
+    @ColumnInfo(name = "msg_notif_count") val msgNotifCount: Int,
+    /** JSON int[24] local-hour histogram. */
+    @ColumnInfo(name = "by_hour_histogram") val byHourHistogram: String,
+)
+
+/** Per-day dwell at a significant place (§6.2, Phase 2). Derived. */
+@Entity(tableName = "place_daily", primaryKeys = ["date", "place_id"])
+data class PlaceDailyEntity(
+    val date: String,
+    @ColumnInfo(name = "place_id") val placeId: Long,
+    @ColumnInfo(name = "arrival_ts") val arrivalTs: Long,
+    @ColumnInfo(name = "depart_ts") val departTs: Long,
+    @ColumnInfo(name = "dwell_seconds") val dwellSeconds: Int,
+)
 
 /** Reconstructed app sessions (§6.2). Derived — rebuilt by rollups. */
 @Entity(

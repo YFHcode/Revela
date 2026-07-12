@@ -97,6 +97,60 @@ interface TrackedEntityDao {
 
     @Query("SELECT * FROM entities WHERE kind = :kind")
     suspend fun byKind(kind: EntityKind): List<TrackedEntity>
+
+    @Query("SELECT * FROM entities WHERE kind = :kind ORDER BY display_name")
+    fun byKindFlow(kind: EntityKind): Flow<List<TrackedEntity>>
+
+    @Query("SELECT * FROM entities WHERE id = :id")
+    suspend fun byId(id: Long): TrackedEntity?
+
+    @Query("UPDATE entities SET display_name = :name, place_label = :label WHERE id = :id")
+    suspend fun relabelPlace(id: Long, name: String, label: String)
+
+    /** Refresh a place's centroid without touching its (possibly user-set) name/label. */
+    @Query("UPDATE entities SET place_lat = :lat, place_lon = :lon WHERE id = :id")
+    suspend fun updatePlaceCentroid(id: Long, lat: Double, lon: Double)
+
+    /** Full removal of one entity's history (D6): raw events, rollups, insights. */
+    @Query("DELETE FROM events WHERE entity_id = :id")
+    suspend fun deleteEvents(id: Long)
+
+    @Query("DELETE FROM comms_daily WHERE contact_id = :id")
+    suspend fun deleteComms(id: Long)
+
+    @Query("DELETE FROM place_daily WHERE place_id = :id")
+    suspend fun deletePlaceDaily(id: Long)
+
+    /** Exact match on the single-entity form "[id]" (avoids 5 matching 15/51). */
+    @Query("DELETE FROM insights WHERE entity_ids = '[' || :id || ']'")
+    suspend fun deleteInsightsFor(id: Long)
+
+    @Query("DELETE FROM entities WHERE id = :id")
+    suspend fun deleteEntity(id: Long)
+}
+
+@Dao
+interface CommsDailyDao {
+    @Insert
+    suspend fun insertAll(rows: List<CommsDailyEntity>)
+
+    @Query("DELETE FROM comms_daily")
+    suspend fun clear()
+
+    @Query("SELECT * FROM comms_daily ORDER BY date")
+    suspend fun all(): List<CommsDailyEntity>
+}
+
+@Dao
+interface PlaceDailyDao {
+    @Insert
+    suspend fun insertAll(rows: List<PlaceDailyEntity>)
+
+    @Query("DELETE FROM place_daily")
+    suspend fun clear()
+
+    @Query("SELECT * FROM place_daily ORDER BY date")
+    suspend fun all(): List<PlaceDailyEntity>
 }
 
 @Dao
@@ -126,9 +180,9 @@ interface InsightDao {
 
     @Query(
         "SELECT * FROM insights WHERE dismissed = 0 AND llm_text IS NULL " +
-            "ORDER BY created_ts DESC LIMIT :limit",
+            "AND type NOT IN (:excludedTypes) ORDER BY created_ts DESC LIMIT :limit",
     )
-    suspend fun needingNarration(limit: Int): List<InsightEntity>
+    suspend fun needingNarration(excludedTypes: List<String>, limit: Int): List<InsightEntity>
 
     @Query("UPDATE insights SET llm_text = :llmText WHERE id = :id")
     suspend fun setLlmText(id: Long, llmText: String)

@@ -7,10 +7,13 @@ package com.revela.insights.llm
  */
 object SqlGuard {
 
-    val ALLOWED_TABLES = setOf("day_summary", "usage_daily", "usage_hourly", "sessions", "insights")
+    // Only name-free numeric aggregate tables. `insights`, `comms_daily`,
+    // `place_daily` and `entities` are excluded because they can contain
+    // contact/place names — those must never reach the cloud (D4/§3.3).
+    val ALLOWED_TABLES = setOf("day_summary", "usage_daily", "usage_hourly", "sessions")
 
     private val FORBIDDEN = Regex(
-        """\b(insert|update|delete|drop|alter|create|attach|detach|pragma|vacuum|reindex|replace|events|watermarks|entities|llm_audit)\b""",
+        """\b(insert|update|delete|drop|alter|create|attach|detach|pragma|vacuum|reindex|replace|events|watermarks|entities|llm_audit|insights|comms_daily|place_daily)\b""",
         RegexOption.IGNORE_CASE,
     )
     private val TABLE_REF = Regex("""(?i)\b(?:from|join)\s+([a-zA-Z_][a-zA-Z0-9_]*)""")
