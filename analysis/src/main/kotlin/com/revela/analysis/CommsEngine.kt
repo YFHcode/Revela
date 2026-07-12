@@ -115,20 +115,30 @@ class CommsEngine(
         return bestStart to bestCount.toDouble() / total
     }
 
+    /**
+     * Weekly message counts in 7-day windows anchored to the first observed
+     * day (NOT calendar weeks — arbitrary Monday anchoring would fabricate
+     * partial-week dips at the edges and trigger false "drift"). Silent weeks
+     * count as 0; a trailing partial week is dropped so it can't read as a
+     * decline.
+     */
     private fun weeklyCounts(days: List<ContactDay>): DoubleArray {
         if (days.isEmpty()) return DoubleArray(0)
         val sorted = days.sortedBy { it.dayKey }
-        val firstMonday = LocalDate.parse(sorted.first().dayKey).with(java.time.DayOfWeek.MONDAY)
-        val byWeek = sortedMapOf<Long, Int>()
+        val first = LocalDate.parse(sorted.first().dayKey)
+        val last = LocalDate.parse(sorted.last().dayKey)
+        val totalDays = java.time.temporal.ChronoUnit.DAYS.between(first, last) + 1
+        val fullWeeks = (totalDays / 7).toInt()
+        if (fullWeeks == 0) return DoubleArray(0)
+
+        val counts = DoubleArray(fullWeeks)
         for (d in sorted) {
-            val week = java.time.temporal.ChronoUnit.WEEKS.between(
-                firstMonday,
-                LocalDate.parse(d.dayKey),
-            )
-            byWeek.merge(week, d.msgCount, Int::plus)
+            val week = (
+                java.time.temporal.ChronoUnit.DAYS.between(first, LocalDate.parse(d.dayKey)) / 7
+                ).toInt()
+            if (week < fullWeeks) counts[week] += d.msgCount
         }
-        val lastWeek = byWeek.lastKey()
-        return (0..lastWeek).map { (byWeek[it] ?: 0).toDouble() }.toDoubleArray()
+        return counts
     }
 
     private fun clock(hour: Int): String = "%02d:00".format(hour)
