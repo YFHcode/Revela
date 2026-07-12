@@ -5,11 +5,14 @@ import com.revela.capture.CaptureGraph
 import com.revela.capture.CaptureGraphOwner
 import com.revela.capture.CaptureScheduler
 import com.revela.capture.Permissions
+import com.revela.insights.InsightsGraph
+import com.revela.insights.InsightsGraphOwner
+import com.revela.insights.InsightsScheduler
 import com.revela.pipeline.PipelineGraph
 import com.revela.pipeline.PipelineGraphOwner
 import com.revela.pipeline.RollupScheduler
 
-class RevelaApp : Application(), CaptureGraphOwner, PipelineGraphOwner {
+class RevelaApp : Application(), CaptureGraphOwner, PipelineGraphOwner, InsightsGraphOwner {
 
     lateinit var container: AppContainer
         private set
@@ -19,6 +22,9 @@ class RevelaApp : Application(), CaptureGraphOwner, PipelineGraphOwner {
 
     override val pipelineGraph: PipelineGraph
         get() = container.pipelineGraph
+
+    override val insightsGraph: InsightsGraph
+        get() = container.insightsGraph
 
     override fun onCreate() {
         super.onCreate()
@@ -32,6 +38,7 @@ class RevelaApp : Application(), CaptureGraphOwner, PipelineGraphOwner {
             CaptureScheduler.ensureScheduled(this)
             CaptureScheduler.captureNow(this)
             RollupScheduler.ensureScheduled(this)
+            InsightsScheduler.ensureScheduled(this)
         }
     }
 }

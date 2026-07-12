@@ -10,6 +10,9 @@ import com.revela.core.db.DatabaseFactory
 import com.revela.core.db.DbKeyManager
 import com.revela.core.db.RevelaDatabase
 import com.revela.core.db.RoomEventLog
+import com.revela.insights.AnalysisRunner
+import com.revela.insights.InsightsGraph
+import com.revela.insights.InsightsScheduler
 import com.revela.pipeline.PipelineGraph
 import com.revela.pipeline.RollupRunner
 import com.revela.pipeline.RollupScheduler
@@ -39,6 +42,20 @@ class AppContainer(context: Context) {
         PipelineGraph(rollupRunner = RollupRunner(database))
     }
 
+    val insightsGraph: InsightsGraph by lazy {
+        InsightsGraph(
+            analysisRunner = AnalysisRunner(
+                db = database,
+                appLabel = ::appLabel,
+            ),
+        )
+    }
+
+    private fun appLabel(pkg: String): String = runCatching {
+        val pm = appContext.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+    }.getOrDefault(pkg.substringAfterLast('.'))
+
     /**
      * Full wipe (D6): stop all work, delete the encrypted database and its
      * key, clear preferences, then restart the process into a fresh install
@@ -47,6 +64,7 @@ class AppContainer(context: Context) {
     fun fullWipeAndRestart() {
         CaptureScheduler.cancel(appContext)
         RollupScheduler.cancel(appContext)
+        InsightsScheduler.cancel(appContext)
         runCatching { database.close() }
         appContext.deleteDatabase("revela.db")
         DbKeyManager(appContext).destroy()

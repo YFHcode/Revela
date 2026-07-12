@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.revela.app.AppContainer
 import com.revela.capture.CaptureScheduler
+import com.revela.insights.InsightsScheduler
 import com.revela.pipeline.RollupScheduler
 
 @Composable
@@ -63,9 +64,11 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit) {
                         if (enabled) {
                             CaptureScheduler.ensureScheduled(context)
                             RollupScheduler.ensureScheduled(context)
+                            InsightsScheduler.ensureScheduled(context)
                         } else {
                             CaptureScheduler.cancel(context)
                             RollupScheduler.cancel(context)
+                            InsightsScheduler.cancel(context)
                         }
                     },
                 )

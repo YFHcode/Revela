@@ -55,6 +55,9 @@ interface UsageDailyDao {
 
     @Query("SELECT * FROM usage_daily WHERE date = :date ORDER BY total_seconds DESC LIMIT :limit")
     fun topForDate(date: String, limit: Int): Flow<List<UsageDailyEntity>>
+
+    @Query("SELECT * FROM usage_daily ORDER BY date")
+    suspend fun all(): List<UsageDailyEntity>
 }
 
 @Dao
@@ -67,6 +70,9 @@ interface DaySummaryDao {
 
     @Query("SELECT * FROM day_summary ORDER BY date DESC LIMIT :limit")
     fun recent(limit: Int): Flow<List<DaySummaryEntity>>
+
+    @Query("SELECT * FROM day_summary ORDER BY date")
+    suspend fun all(): List<DaySummaryEntity>
 }
 
 @Dao
@@ -89,8 +95,25 @@ interface TrackedEntityDao {
 
 @Dao
 interface InsightDao {
-    @Upsert
-    suspend fun upsert(insight: InsightEntity)
+    @Insert
+    suspend fun insert(insight: InsightEntity): Long
+
+    @Query("SELECT * FROM insights WHERE dedupe_key = :key LIMIT 1")
+    suspend fun byDedupeKey(key: String): InsightEntity?
+
+    /** Refresh numbers/text of an existing insight, preserving created_ts and pin/dismiss state. */
+    @Query(
+        "UPDATE insights SET stat_payload = :payload, text = :text, confidence = :confidence, " +
+            "window_start = :windowStart, window_end = :windowEnd WHERE id = :id",
+    )
+    suspend fun refresh(
+        id: Long,
+        payload: String,
+        text: String,
+        confidence: Double,
+        windowStart: Long,
+        windowEnd: Long,
+    )
 
     @Query("SELECT * FROM insights WHERE dismissed = 0 ORDER BY pinned DESC, created_ts DESC")
     fun feed(): Flow<List<InsightEntity>>

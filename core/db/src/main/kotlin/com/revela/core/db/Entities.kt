@@ -143,10 +143,12 @@ fun DaySummary.toEntity() = DaySummaryEntity(
 /** Discovered patterns surfaced to the user (§6.4). */
 @Entity(
     tableName = "insights",
-    indices = [Index("type"), Index("created_ts")],
+    indices = [Index("type"), Index("created_ts"), Index(value = ["dedupe_key"], unique = true)],
 )
 data class InsightEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** Stable identity (type+subject+window) so re-analysis UPSERTs instead of repeating. */
+    @ColumnInfo(name = "dedupe_key") val dedupeKey: String,
     @ColumnInfo(name = "created_ts") val createdTs: Long,
     val type: String,
     val confidence: Double,

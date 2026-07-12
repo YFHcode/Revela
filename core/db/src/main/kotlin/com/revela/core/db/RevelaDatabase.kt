@@ -14,7 +14,7 @@ import androidx.room.RoomDatabase
         UsageDailyEntity::class,
         DaySummaryEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class RevelaDatabase : RoomDatabase() {

@@ -10,6 +10,20 @@ milestone breakdown.
 
 ## Status
 
+**Milestone M3** — analysis engine + insights feed v0:
+
+- Pattern detectors (pure JVM, statistics only — the LLM never does
+  discovery): periodicity via autocorrelation, change-point via SSE split
+  with an effect-size gate, robust deviation (median + IQR), chronotype
+  (weekday/weekend first-unlock shift), reflex-check reality
+- Every detector is tested against planted fixtures AND verified-silent
+  shuffled controls, so the feed can't drift into horoscope territory
+- Insight engine drafts neutral, curious text (P1) with the numbers kept in
+  a stat payload; UPSERT dedupe means the feed never repeats itself and
+  dismissed insights stay dismissed
+- Insights feed UI: plain-language cards, supporting numbers on tap,
+  pin/dismiss; unlocks after the silent-observation window (day 21 default)
+
 **Milestone M2** — rollups + dashboard v0:
 
 - Session reconstruction from the raw log (foreground/background pairing,

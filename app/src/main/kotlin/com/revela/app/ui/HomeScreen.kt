@@ -28,6 +28,7 @@ import com.revela.capture.Permissions
 fun HomeScreen(
     container: AppContainer,
     onOpenDashboard: () -> Unit,
+    onOpenInsights: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenDebugLog: () -> Unit,
 ) {
@@ -83,7 +84,13 @@ fun HomeScreen(
             Button(onClick = onOpenDashboard, modifier = Modifier.fillMaxWidth()) {
                 Text("Dashboard")
             }
-        } else {
+        }
+        if (settings.silentWindowOver() || settings.devMode) {
+            Button(onClick = onOpenInsights, modifier = Modifier.fillMaxWidth()) {
+                Text("Insights")
+            }
+        }
+        if (!settings.dashboardUnlocked()) {
             Card {
                 Text(
                     "The dashboard unlocks after day ${com.revela.app.SettingsStore.DASHBOARD_UNLOCK_DAYS} " +
