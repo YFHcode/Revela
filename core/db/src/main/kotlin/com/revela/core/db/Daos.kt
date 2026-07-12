@@ -31,6 +31,9 @@ interface SessionDao {
 
     @Query("DELETE FROM sessions")
     suspend fun clear()
+
+    @Query("SELECT * FROM sessions ORDER BY start_ts")
+    suspend fun allOrdered(): List<SessionEntity>
 }
 
 @Dao
@@ -43,6 +46,9 @@ interface UsageHourlyDao {
 
     @Query("SELECT * FROM usage_hourly WHERE date >= :minDate")
     fun since(minDate: String): Flow<List<UsageHourlyEntity>>
+
+    @Query("SELECT * FROM usage_hourly ORDER BY date, hour")
+    suspend fun all(): List<UsageHourlyEntity>
 }
 
 @Dao

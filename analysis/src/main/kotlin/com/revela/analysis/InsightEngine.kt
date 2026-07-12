@@ -30,6 +30,8 @@ object InsightTypes {
     const val UNUSUAL_DAY = "unusual_day"
     const val CHRONOTYPE = "chronotype"
     const val REFLEX_CHECKS = "reflex_checks"
+    const val FEEDBACK_LOOP = "feedback_loop"
+    const val ROUTINE = "routine"
 }
 
 /**
@@ -209,4 +211,4 @@ class InsightEngine {
 }
 
 /** Round to 2 decimals; Double.toString always uses '.', keeping JSON valid in any locale. */
-private fun Double.r2(): Double = round(this * 100) / 100
+internal fun Double.r2(): Double = round(this * 100) / 100

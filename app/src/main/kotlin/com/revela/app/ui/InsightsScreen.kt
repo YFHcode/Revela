@@ -138,6 +138,8 @@ private fun typeLabel(type: String): String = when (type) {
     "unusual_day" -> "Unusual day"
     "chronotype" -> "Chronotype"
     "reflex_checks" -> "Quick checks"
+    "feedback_loop" -> "Connected patterns"
+    "routine" -> "Routine"
     else -> "Pattern"
 }
 

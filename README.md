@@ -10,6 +10,18 @@ milestone breakdown.
 
 ## Status
 
+**Milestone M4** — cross-stream lagged correlation + sequence mining:
+
+- Lagged cross-correlation engine (§8.9, the highest-leverage detector):
+  Spearman rank correlation over a curated (driver → outcome, lag) registry
+  — evening/late-night screen time vs next-morning first pickup, day-start
+  time vs total screen time, etc. — with Benjamini–Hochberg FDR correction
+  across the whole hypothesis family so discoveries mean something
+- Routine mining (§8.4): PrefixSpan over app-open bursts; surfaces the
+  recurring morning-opening and evening-wind-down sequences
+- Both ship as new insight types ("Connected patterns", "Routine") with the
+  same planted-fixture + verified-silent-control test discipline
+
 **Milestone M3** — analysis engine + insights feed v0:
 
 - Pattern detectors (pure JVM, statistics only — the LLM never does
