@@ -29,13 +29,15 @@ ksp {
 dependencies {
     api(project(":core:model"))
 
-    implementation(libs.room.runtime)
+    // api: RevelaDatabase extends RoomDatabase and DAOs return Flow, so
+    // consumers need these types on their compile classpath.
+    api(libs.room.runtime)
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.sqlite.ktx)
-    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
 }
