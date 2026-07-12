@@ -17,8 +17,9 @@ raw event stream up into summaries, runs a statistical pattern-mining engine
 over those summaries (periodicity, sequences, change-points, deviations,
 cross-stream lagged correlation), and surfaces what it finds as a feed of
 neutral, plain-language insights. All raw data stays on the device, encrypted.
-The LLM narrates and answers questions over aggregates; it never does pattern
-discovery and never sees raw content.
+The LLM (OpenAI API for now) narrates and answers questions over **abstracted
+aggregates only**; it never does pattern discovery and never sees raw events
+or content (brief rule D4).
 
 Non-goals: productivity scoring, streaks/goals/guilt mechanics, cloud sync,
 accounts, telemetry, ads, iOS.
@@ -30,8 +31,8 @@ accounts, telemetry, ads, iOS.
 | # | Question | Decision | Rationale |
 |---|----------|----------|-----------|
 | Q1 | Graph storage | **Graph-shaped tables in the existing SQLite** (`nodes`, `edges`) | No new dependency; Room queries + in-memory Louvain over a few thousand edges is trivial at single-user scale. Revisit only if edge counts explode. |
-| Q2 | On-device LLM | **Gemma 3 1B (int4) via MediaPipe LLM Inference**, downloaded on demand (not bundled in the APK); target ≥ 6 GB RAM devices, feature-gated at runtime | Smallest model that narrates acceptably; ~0.5–0.7 GB on disk. Narration (L1) has a **template fallback** (M3), so devices that can't run the model still get the full product. |
-| Q3 | Cloud LLM | **No. On-device only.** | Default posture per D4. Removes an entire class of privacy review. Leave the abstraction seam (`Narrator` interface) so a cloud backend could be added later behind an explicit opt-in, but ship none. |
+| Q2 | LLM choice | **OpenAI API** (e.g. `gpt-4o-mini` for narration, a stronger model for the query interface), user-supplied API key stored in encrypted prefs | Fast to ship, no device-RAM constraints, good narration quality. Narration (L1) keeps a **template fallback** (M3) so the app is fully functional offline / without a key. An on-device model (MediaPipe + Gemma) remains a possible later swap behind the same `Narrator`/`QueryEngine` interfaces. |
+| Q3 | Cloud LLM permitted? | **Yes — with D4 strictly enforced.** The OpenAI API may receive **abstracted patterns and summary aggregates only** — never raw events, notification titles/senders, message content, or raw location points. Enforced structurally: the LLM layer can only read a curated "LLM-safe view" of the data (see §3.3), not the DB. | User's call for velocity. D4's aggregation firewall keeps the privacy posture: what leaves the device is the same material that appears on an insight card. |
 | Q4 | Silent-observation window | **Default 21 days, user-adjustable 7–28 in onboarding** | 3 weeks covers 3 full weekly cycles — the minimum for weekday/weekend baselines and 7-day periodicity to be non-noise. Dashboard unlocks at day 8 (raw summaries only); insights feed unlocks at day 21. |
 | Q5 | UsageStats poll interval | **WorkManager periodic, 15 min** (WorkManager's minimum), cursor-based | Battery-negligible since `queryEvents` reads a system buffer. The cursor + append-only log makes interval choice non-critical; if the OS defers the job, nothing is lost. |
 | Q6 | Min API level | **minSdk 26 (Android 8.0), targetSdk 35** | 26 gives `UsageEvents` screen-interactive/keyguard constants (`SCREEN_INTERACTIVE` etc. are API 28 — see mitigation in §9) and sane background limits to design against from day 1. Practically: **minSdk 28** if we want the screen/keyguard event constants without fallback code; decide at M1 kickoff — plan assumes **28**. |
@@ -63,6 +64,8 @@ Key invariants (enforced in code review, not just docs):
 4. **No heavy compute on the UI thread.** UI reads summary + insight tables only.
 5. **Stats discover, LLM narrates.** No LLM call anywhere in the `analysis`
    module.
+6. **The LLM sees aggregates only (D4).** All LLM traffic goes through the
+   `LlmSafePayload` layer (§3.3); no module hands raw tables to the network.
 
 ### 3.1 Module layout (Gradle modules)
 
@@ -98,9 +101,31 @@ synthetic fixtures (see §8 Testing below).
 - Stats: hand-rolled where simple (autocorrelation, z-scores, CUSUM,
   cross-correlation) + **Apache Commons Math** for FFT; **SMILE** only if/when
   DBSCAN (Phase 2) — avoid pulling it in for Phase 1
-- MediaPipe LLM Inference (M5)
-- No network permission usage in Phase 1 code paths at all; the only network
-  use ever is the one-time model download in M5 (explicit user action)
+- OpenAI API (M5) via plain OkHttp/Retrofit + kotlinx-serialization (no heavy
+  SDK dependency); user-supplied API key in `EncryptedSharedPreferences`
+- Network access is used **only** by the `:insights` LLM layer, and only with
+  `LlmSafePayload` content; capture/pipeline/analysis modules have no network
+  code, and a network-security config restricts traffic to `api.openai.com`
+
+### 3.3 The LLM privacy firewall (`LlmSafePayload`)
+
+Because a cloud LLM is now in play, D4 is enforced in code, not convention:
+
+- A single `LlmGateway` class owns the API key and the HTTP client. It accepts
+  only `LlmSafePayload` values — typed structures built exclusively from
+  rollup aggregates and insight `stat_payload`s (daily totals, histograms,
+  detected periods/lags, app display names).
+- Forbidden at the type level: raw `events` rows, notification titles/senders,
+  contact names (contacts are pseudonymized to stable labels like
+  "Contact #3" before leaving the device; the mapping stays local and the UI
+  re-substitutes real names when rendering answers), raw location coordinates
+  (places leave only as their user-assigned labels or "Place #2").
+- The query interface's SQL tool (M5) runs **locally**: the model composes a
+  query plan, the app executes read-only SQL on-device against whitelisted
+  rollup tables, and only the aggregated result rows (post-pseudonymization)
+  are sent back to the model.
+- Everything sent to the API is logged to a local, user-viewable "what left
+  the device" audit screen in Settings.
 
 ---
 
@@ -246,25 +271,31 @@ Accept when: planted lagged dependency (evening minutes ⇒ next-morning unlock
 +40 min, r≈0.6) is found at the right lag and direction, and a permuted control
 yields zero discoveries at the chosen FDR; planted morning sequence is mined.
 
-### M5 — On-device LLM: narration + query
+### M5 — LLM layer (OpenAI API): narration + query
 Scope:
 - `Narrator` interface with two impls: `TemplateNarrator` (M3, always
-  available) and `LlmNarrator` (MediaPipe + Gemma 3 1B int4)
-- Model download flow: explicit user opt-in screen, size warning, resumable
-  download, checksum; runtime capability gate (RAM check) — otherwise the
-  option is hidden and templates remain
+  available) and `OpenAiNarrator` (`gpt-4o-mini` class model)
+- Setup flow: user pastes their OpenAI API key (stored in
+  `EncryptedSharedPreferences`), a clear explanation of exactly what data can
+  leave the device (D4 / §3.3), and an off switch that reverts everything to
+  templates
+- `LlmGateway` + `LlmSafePayload` firewall (§3.3), including contact/place
+  pseudonymization and the "what left the device" audit log
 - L1 narration: prompt = insight type + `stat_payload` + P1 style rules;
   output validated (length, no numbers invented — reject and fall back to
   template if the payload numbers don't appear)
 - L3 query interface v1: chat screen; the model gets a system prompt
-  describing the summary tables and a small tool set — `run_readonly_sql`
-  (SELECT-only, whitelisted tables: rollups + insights, never `events`) — and
-  synthesizes answers ("why was last week off?")
-- Inference runs as a foreground-user-initiated task, never in background jobs
+  describing the summary tables and a tool — `run_readonly_sql` (SELECT-only,
+  whitelisted tables: rollups + insights, never `events`) — executed
+  **locally**, with result rows pseudonymized before being returned to the
+  API (§3.3)
+- Graceful degradation: no key / no network / API error → templates and a
+  quiet notice, never a broken feed
 
-Accept when: airplane-mode device answers "when do I usually wake up on
-weekends?" correctly from `day_summary`; narration falls back to template
-cleanly when the model is absent/unhealthy.
+Accept when: with a key configured, "when do I usually wake up on weekends?"
+is answered correctly from `day_summary`; the audit screen shows only
+aggregate payloads; with the key removed or network off, narration falls back
+to templates cleanly.
 
 ### M6 — Phase 2: comms timing, places, calendar
 Scope:
@@ -293,8 +324,10 @@ Scope:
 - `nodes`/`edges` tables; edge builders from co-occurrence windows
   (CO_OCCURRED, LED_TO from session succession, CO_LOCATED, MESSAGED, VIEWED)
 - Louvain/Leiden community detection (in-memory over the SQLite edges) →
-  candidate "modes"; naming via on-device LLM over the community's member
-  entities + time signature ("Tuesday evenings: gym + podcast + no messaging")
+  candidate "modes"; naming via the LLM layer over the community's member
+  entities + time signature ("Tuesday evenings: gym + podcast + no messaging"),
+  through the same §3.3 firewall (pseudonymized contacts/places). Note: any
+  future raw-CONTENT processing (M8) still requires an on-device model per D5.
 - Mode insights + a graph-ish exploration screen (simple: mode cards, not a
   force-directed toy)
 
@@ -310,8 +343,11 @@ depends on it.
 
 **Privacy enforcement (D1–D7)** — not a milestone, a standing rule set:
 - CI check: `INTERNET` permission absent from the merged manifest until M5,
-  then present only for the model-download flow (network security config pins
-  the single download host)
+  then present only for the `:insights` LLM layer (network security config
+  restricts traffic to `api.openai.com`; no other module contains network code)
+- D4 firewall: all outbound payloads built via `LlmSafePayload` (§3.3);
+  contact/place identities pseudonymized before leaving the device; local
+  audit log of everything sent
 - No analytics/crash SDKs; crash logs stay in a local ring buffer viewable in
   settings
 - Destructive actions (range delete, entity delete, wipe) always confirmed,
@@ -361,7 +397,9 @@ continuously so M3/M4 detectors meet real data the day they're written.
 | API-level differences in `UsageEvents` constants (Q6) | minSdk 28 assumption; verify constants on the 3-device matrix in M1, before anything is built on top |
 | Insight feed feels like horoscope (false positives) | FDR correction (M4), ≥3-cycle rule for periodicity, confidence floor, negative-control tests as CI gates |
 | Insight feed feels judgmental (violates P1) | Copy review checklist per template; no comparative/normative words ("too much", "wasted", "should") allowed in templates or LLM style prompt |
-| 1B model narrates badly or hallucinates numbers | Template fallback is the default path; LLM output rejected unless payload numbers appear verbatim |
+| LLM narrates badly or hallucinates numbers | LLM output rejected unless payload numbers appear verbatim; template fallback is always available |
+| Cloud LLM leaks more than intended (D4 violation) | `LlmSafePayload` type firewall (§3.3); pseudonymized contacts/places; single `LlmGateway` chokepoint; user-viewable audit log of every outbound payload; network config pinned to `api.openai.com` |
+| No network / no API key | App is fully functional on templates; LLM features are additive, never load-bearing |
 | SQLCipher + Room version friction | Pin versions in M1; DB layer isolated in `:core:db` so a swap (e.g. to `sqlcipher-android` successor) touches one module |
 | Timezone/DST shears daily baselines | Local-date rollup keys + stored zone id + 4 a.m. day boundary; explicit tests |
 | Scope creep toward content capture | M8 is fenced off behind a separate design doc; nothing may depend on it |
