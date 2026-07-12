@@ -79,8 +79,9 @@ object Louvain {
         // Internal weight per community (edges with both endpoints inside).
         val internal = HashMap<Long, Double>()
         for (e in edges) {
-            if (e.a != e.b && community[e.a] == community[e.b]) {
-                internal.merge(community[e.a], e.weight, Double::plus)
+            val ca = community[e.a] ?: continue
+            if (e.a != e.b && ca == community[e.b]) {
+                internal.merge(ca, e.weight, Double::plus)
             }
         }
 
