@@ -48,7 +48,7 @@ class AppContainer(context: Context) {
 
     val llmConfig: LlmConfig by lazy { LlmConfig(appContext) }
 
-    private val llmGateway: LlmGateway by lazy { LlmGateway(llmConfig, database) }
+    val llmGateway: LlmGateway by lazy { LlmGateway(llmConfig, database) }
 
     val queryEngine: QueryEngine by lazy { QueryEngine(database, llmGateway, llmConfig) }
 

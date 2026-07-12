@@ -38,8 +38,8 @@ fun HomeScreen(
     val eventCount by container.database.eventDao().count()
         .collectAsStateWithLifecycle(initialValue = 0L)
 
-    val daysElapsed = settings.silentDaysElapsed()
-    val windowDays = settings.silentWindowDays
+    val daysObserved = settings.observedDays()
+    val targetDays = com.revela.app.SettingsStore.BASELINE_TARGET_DAYS
 
     Column(
         modifier = Modifier
@@ -50,19 +50,20 @@ fun HomeScreen(
     ) {
         Text("Revela", style = MaterialTheme.typography.headlineLarge)
 
-        if (!settings.silentWindowOver()) {
+        if (daysObserved < targetDays) {
             Card {
                 Column(Modifier.padding(16.dp)) {
-                    Text("Watching quietly", style = MaterialTheme.typography.titleMedium)
+                    Text("Baseline building", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Day ${daysElapsed.coerceAtMost(windowDays)} of $windowDays. " +
-                            "Insights unlock once there's an honest baseline.",
+                        "Day ${daysObserved.coerceAtLeast(0)} of ~$targetDays. Early insights " +
+                            "are already flowing — they sharpen and deepen as the " +
+                            "baseline grows.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(12.dp))
                     LinearProgressIndicator(
-                        progress = { (daysElapsed.toFloat() / windowDays).coerceIn(0f, 1f) },
+                        progress = { (daysObserved.toFloat() / targetDays).coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -73,37 +74,23 @@ fun HomeScreen(
                     Text("Baseline established", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Your rhythms are visible in the dashboard. The insights feed " +
-                            "arrives in the next milestone.",
+                        "Rhythms, routines, and shifts are now detectable with " +
+                            "full confidence.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
         }
 
-        if (settings.dashboardUnlocked()) {
-            Button(onClick = onOpenDashboard, modifier = Modifier.fillMaxWidth()) {
-                Text("Dashboard")
-            }
+        Button(onClick = onOpenDashboard, modifier = Modifier.fillMaxWidth()) {
+            Text("Dashboard")
         }
-        if (settings.silentWindowOver() || settings.devMode) {
-            Button(onClick = onOpenInsights, modifier = Modifier.fillMaxWidth()) {
-                Text("Insights")
-            }
-            if (container.llmConfig.active) {
-                Button(onClick = onOpenChat, modifier = Modifier.fillMaxWidth()) {
-                    Text("Ask")
-                }
-            }
+        Button(onClick = onOpenInsights, modifier = Modifier.fillMaxWidth()) {
+            Text("Insights")
         }
-        if (!settings.dashboardUnlocked()) {
-            Card {
-                Text(
-                    "The dashboard unlocks after day ${com.revela.app.SettingsStore.DASHBOARD_UNLOCK_DAYS} " +
-                        "of observation.",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(16.dp),
-                )
+        if (container.llmConfig.active) {
+            Button(onClick = onOpenChat, modifier = Modifier.fillMaxWidth()) {
+                Text("Ask")
             }
         }
 

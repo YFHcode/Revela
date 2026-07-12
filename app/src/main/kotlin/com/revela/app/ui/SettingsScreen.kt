@@ -1,6 +1,7 @@
 package com.revela.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -22,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,17 +36,38 @@ import com.revela.app.AppContainer
 import com.revela.capture.CaptureScheduler
 import com.revela.insights.InsightsScheduler
 import com.revela.pipeline.RollupScheduler
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onOpenAudit: () -> Unit) {
     val context = LocalContext.current
     val settings = container.settings
     var captureEnabled by remember { mutableStateOf(settings.captureEnabled) }
-    var devMode by remember { mutableStateOf(settings.devMode) }
     var showWipeDialog by remember { mutableStateOf(false) }
     var llmEnabled by remember { mutableStateOf(container.llmConfig.enabled) }
     var hasKey by remember { mutableStateOf(!container.llmConfig.apiKey.isNullOrBlank()) }
     var keyInput by remember { mutableStateOf("") }
+    var testing by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<String?>(null) }
+    var models by remember { mutableStateOf<List<String>>(emptyList()) }
+    var currentModel by remember { mutableStateOf(container.llmConfig.model) }
+    var modelMenuOpen by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    fun testKeyAndLoadModels() {
+        testing = true
+        testResult = null
+        scope.launch {
+            val found = container.llmGateway.listModels()
+            testResult = if (found != null) {
+                models = found
+                "Key works — ${found.size} usable models available."
+            } else {
+                "Couldn't verify the key. Check it (and your connection) and try again."
+            }
+            testing = false
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -77,16 +102,6 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onOpenAudit: () 
                         }
                     },
                 )
-                SettingSwitch(
-                    title = "Developer mode",
-                    description = "Bypasses the quiet-observation window so screens show " +
-                        "immediately. Baselines may be less honest while enabled.",
-                    checked = devMode,
-                    onCheckedChange = {
-                        devMode = it
-                        settings.devMode = it
-                    },
-                )
             }
         }
 
@@ -112,10 +127,52 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onOpenAudit: () 
                             container.llmConfig.enabled = it
                         },
                     )
+                    Button(
+                        onClick = ::testKeyAndLoadModels,
+                        enabled = !testing,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(if (testing) "Testing…" else "Test key & load models")
+                    }
+                    testResult?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Box {
+                        OutlinedButton(
+                            onClick = {
+                                if (models.isEmpty()) testKeyAndLoadModels()
+                                modelMenuOpen = true
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Model: $currentModel")
+                        }
+                        DropdownMenu(
+                            expanded = modelMenuOpen && models.isNotEmpty(),
+                            onDismissRequest = { modelMenuOpen = false },
+                        ) {
+                            models.forEach { model ->
+                                DropdownMenuItem(
+                                    text = { Text(model) },
+                                    onClick = {
+                                        currentModel = model
+                                        container.llmConfig.model = model
+                                        modelMenuOpen = false
+                                    },
+                                )
+                            }
+                        }
+                    }
                     OutlinedButton(
                         onClick = {
                             container.llmConfig.apiKey = null
                             hasKey = false
+                            models = emptyList()
+                            testResult = null
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -135,6 +192,7 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onOpenAudit: () 
                             container.llmConfig.apiKey = keyInput.trim()
                             keyInput = ""
                             hasKey = true
+                            testKeyAndLoadModels()
                         },
                         enabled = keyInput.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),

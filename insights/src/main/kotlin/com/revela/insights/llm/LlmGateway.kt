@@ -96,8 +96,55 @@ class LlmGateway(
         }
     }
 
+    /**
+     * GET /v1/models — the chat-capable models this key can access. Doubles as
+     * the key test: null means the key (or network) doesn't work. Sends no
+     * user data; still audit-logged for completeness.
+     */
+    suspend fun listModels(): List<String>? {
+        val key = config.apiKey
+        if (key.isNullOrBlank()) return null
+
+        db.llmAuditDao().insert(
+            LlmAuditEntity(
+                ts = System.currentTimeMillis(),
+                purpose = "list_models",
+                payload = """{"request":"GET /v1/models","body":"none"}""",
+            ),
+        )
+
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val connection = URL(MODELS_ENDPOINT).openConnection() as HttpURLConnection
+                try {
+                    connection.requestMethod = "GET"
+                    connection.connectTimeout = 15_000
+                    connection.readTimeout = 30_000
+                    connection.setRequestProperty("Authorization", "Bearer $key")
+                    if (connection.responseCode !in 200..299) return@runCatching null
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    val data = JSONObject(response).getJSONArray("data")
+                    buildList {
+                        for (i in 0 until data.length()) {
+                            val id = data.getJSONObject(i).optString("id")
+                            if (isChatModel(id)) add(id)
+                        }
+                    }.sorted()
+                } finally {
+                    connection.disconnect()
+                }
+            }.getOrNull()
+        }
+    }
+
+    private fun isChatModel(id: String): Boolean =
+        (id.startsWith("gpt-") || id.startsWith("chatgpt") || Regex("^o\\d").containsMatchIn(id)) &&
+            listOf("audio", "realtime", "transcribe", "tts", "search", "image", "instruct")
+                .none { id.contains(it) }
+
     companion object {
-        /** The only remote host in the entire codebase — CI enforces this. */
+        /** api.openai.com is the only remote host in the codebase — CI enforces this. */
         const val ENDPOINT = "https://api.openai.com/v1/chat/completions"
+        const val MODELS_ENDPOINT = "https://api.openai.com/v1/models"
     }
 }

@@ -6,7 +6,9 @@ import com.revela.analysis.CrossStreamEngine
 import com.revela.analysis.CrossStreamSeries
 import com.revela.analysis.DayRow
 import com.revela.analysis.DefaultCandidatePairs
+import com.revela.analysis.EarlyEngine
 import com.revela.analysis.InsightEngine
+import com.revela.analysis.InsightTypes
 import com.revela.analysis.RoutineEngine
 import com.revela.analysis.SeriesBuilder
 import com.revela.core.db.DaySummaryEntity
@@ -50,6 +52,14 @@ class AnalysisRunner(
         }
         val baseDrafts = InsightEngine().generate(series, firstUnlockMinutes, todayKey, now)
 
+        // Early insights from day 1; the tentative chronotype card yields to
+        // the full weekday/weekend one as soon as that can fire.
+        val earlyDrafts = EarlyEngine().generate(series, firstUnlockMinutes, todayKey, now)
+            .filterNot { draft ->
+                draft.type == InsightTypes.EARLY_CHRONOTYPE &&
+                    baseDrafts.any { it.type == InsightTypes.CHRONOTYPE }
+            }
+
         // §8.9 cross-stream lagged correlation over the curated registry.
         val crossSeries = CrossStreamSeries.build(
             summaries = summaries.map {
@@ -81,7 +91,7 @@ class AnalysisRunner(
             now = now,
         )
 
-        InsightWriter(db).upsertAll(baseDrafts + crossDrafts + routineDrafts, now)
+        InsightWriter(db).upsertAll(baseDrafts + earlyDrafts + crossDrafts + routineDrafts, now)
 
         // L1 narration: rewrite a few un-narrated insights per pass. Failures
         // (no key, offline, validation reject) simply leave the template.

@@ -93,7 +93,7 @@ object Bursts {
 
 /** Turns mined sequences into routine insights (§9 "morning/evening routine"). */
 class RoutineEngine(
-    private val minDays: Int = 10,
+    private val minDays: Int = 6,
     private val supportFraction: Double = 0.4,
 ) {
 

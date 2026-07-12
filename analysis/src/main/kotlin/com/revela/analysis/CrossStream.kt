@@ -64,7 +64,7 @@ object DefaultCandidatePairs {
 
 class CrossStreamEngine(
     private val fdrQ: Double = 0.1,
-    private val minOverlap: Int = 20,
+    private val minOverlap: Int = 15,
     private val minAbsR: Double = 0.3,
 ) {
 

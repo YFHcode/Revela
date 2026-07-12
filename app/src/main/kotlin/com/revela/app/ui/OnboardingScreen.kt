@@ -13,13 +13,11 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,7 +36,6 @@ private enum class Step { Welcome, UsageAccess, Battery }
 @Composable
 fun OnboardingScreen(container: AppContainer, onFinished: () -> Unit) {
     var step by remember { mutableStateOf(Step.Welcome) }
-    var silentDays by remember { mutableIntStateOf(container.settings.silentWindowDays) }
 
     Column(
         modifier = Modifier
@@ -49,8 +46,6 @@ fun OnboardingScreen(container: AppContainer, onFinished: () -> Unit) {
     ) {
         when (step) {
             Step.Welcome -> WelcomeStep(
-                silentDays = silentDays,
-                onSilentDaysChange = { silentDays = it },
                 onNext = { step = Step.UsageAccess },
             )
             Step.UsageAccess -> UsageAccessStep(
@@ -59,7 +54,6 @@ fun OnboardingScreen(container: AppContainer, onFinished: () -> Unit) {
             Step.Battery -> BatteryStep(
                 onDone = {
                     val settings = container.settings
-                    settings.silentWindowDays = silentDays
                     settings.observationStart = System.currentTimeMillis()
                     settings.onboardingComplete = true
                     onFinished()
@@ -70,11 +64,7 @@ fun OnboardingScreen(container: AppContainer, onFinished: () -> Unit) {
 }
 
 @Composable
-private fun WelcomeStep(
-    silentDays: Int,
-    onSilentDaysChange: (Int) -> Unit,
-    onNext: () -> Unit,
-) {
+private fun WelcomeStep(onNext: () -> Unit) {
     Text("Revela", style = MaterialTheme.typography.headlineLarge)
     Spacer(Modifier.height(16.dp))
     Text(
@@ -87,15 +77,9 @@ private fun WelcomeStep(
     )
     Spacer(Modifier.height(24.dp))
     Text(
-        "First, I'll watch quietly for $silentDays days before showing you anything, " +
-            "so your baseline stays honest.",
+        "First insights appear within a day. They start simple and grow more " +
+            "precise and more revealing as your baseline builds over the weeks.",
         style = MaterialTheme.typography.bodyMedium,
-    )
-    Slider(
-        value = silentDays.toFloat(),
-        onValueChange = { onSilentDaysChange(it.toInt()) },
-        valueRange = 7f..28f,
-        steps = 20,
     )
     Spacer(Modifier.height(24.dp))
     Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) {

@@ -62,9 +62,9 @@ fun InsightsScreen(container: AppContainer, onBack: () -> Unit) {
         if (insights.isEmpty()) {
             Card {
                 Text(
-                    "Nothing surfaced yet. Patterns need a few weeks of baseline " +
-                        "before they can be trusted — the feed fills in as rhythms " +
-                        "become visible.",
+                    "First insights appear after your first full day of observation. " +
+                        "They start simple — a baseline snapshot, your top apps — and " +
+                        "grow more precise and more revealing as the weeks accumulate.",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(16.dp),
                 )
@@ -140,6 +140,9 @@ private fun typeLabel(type: String): String = when (type) {
     "reflex_checks" -> "Quick checks"
     "feedback_loop" -> "Connected patterns"
     "routine" -> "Routine"
+    "baseline_snapshot" -> "Your baseline"
+    "early_top_apps" -> "Top apps so far"
+    "early_chronotype" -> "Day start"
     else -> "Pattern"
 }
 

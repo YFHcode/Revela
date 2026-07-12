@@ -135,7 +135,7 @@ object Deviation {
     fun detect(
         history: DoubleArray,
         current: Double,
-        minHistory: Int = 8,
+        minHistory: Int = 5,
         zThreshold: Double = 2.0,
     ): Result? {
         if (history.size < minHistory) return null
@@ -178,8 +178,8 @@ object Chronotype {
     fun detect(
         weekdayMinutes: DoubleArray,
         weekendMinutes: DoubleArray,
-        minWeekdayDays: Int = 6,
-        minWeekendDays: Int = 3,
+        minWeekdayDays: Int = 4,
+        minWeekendDays: Int = 2,
         minShiftMin: Double = 20.0,
     ): Result? {
         if (weekdayMinutes.size < minWeekdayDays || weekendMinutes.size < minWeekendDays) return null

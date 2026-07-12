@@ -17,11 +17,14 @@ class LlmConfig(context: Context) {
         get() = prefs.getBoolean("enabled", true)
         set(value) = prefs.edit().putBoolean("enabled", value).apply()
 
-    val narrationModel: String
-        get() = prefs.getString("narration_model", "gpt-4o-mini")!!
+    /** User-selected model, used for both narration and query. */
+    var model: String
+        get() = prefs.getString("model", DEFAULT_MODEL)!!
+        set(value) = prefs.edit().putString("model", value).apply()
 
-    val queryModel: String
-        get() = prefs.getString("query_model", "gpt-4o")!!
+    val narrationModel: String get() = model
+
+    val queryModel: String get() = model
 
     val active: Boolean
         get() = enabled && !apiKey.isNullOrBlank()
@@ -29,5 +32,9 @@ class LlmConfig(context: Context) {
     fun clear() {
         secret.set(null)
         prefs.edit().clear().apply()
+    }
+
+    companion object {
+        const val DEFAULT_MODEL = "gpt-4o-mini"
     }
 }

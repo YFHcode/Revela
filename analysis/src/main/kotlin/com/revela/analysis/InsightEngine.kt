@@ -32,6 +32,11 @@ object InsightTypes {
     const val REFLEX_CHECKS = "reflex_checks"
     const val FEEDBACK_LOOP = "feedback_loop"
     const val ROUTINE = "routine"
+
+    // Early insights — available from day 1, refreshed daily, sharpening with data.
+    const val BASELINE_SNAPSHOT = "baseline_snapshot"
+    const val EARLY_TOP_APPS = "early_top_apps"
+    const val EARLY_CHRONOTYPE = "early_chronotype"
 }
 
 /**
@@ -145,7 +150,7 @@ class InsightEngine {
     private fun reflexDraft(series: List<BehaviorSeries>, todayKey: String, now: Long): InsightDraft? {
         val reflex = series.firstOrNull { it.subjectKey == "reflex_checks" } ?: return null
         val history = reflex.points.filter { it.dayKey < todayKey }.map { it.value }
-        if (history.size < 7) return null
+        if (history.size < 4) return null
         val median = history.sorted()[history.size / 2]
         if (median < 5) return null
         return InsightDraft(
@@ -183,7 +188,22 @@ class InsightEngine {
         )
     }
 
-    private fun fmt(value: Double, unit: SeriesUnit): String = when (unit) {
+    private fun fmt(value: Double, unit: SeriesUnit): String = InsightFormat.value(value, unit)
+
+    private fun clock(minutesOfDay: Double): String = InsightFormat.clock(minutesOfDay)
+
+    private fun prettyDate(dayKey: String): String =
+        LocalDate.parse(dayKey).format(DateTimeFormatter.ofPattern("MMM d", Locale.US))
+
+    private companion object {
+        const val DAY_MS = 24 * 60 * 60 * 1000L
+    }
+}
+
+/** Shared human formatting for insight text. */
+internal object InsightFormat {
+
+    fun value(value: Double, unit: SeriesUnit): String = when (unit) {
         SeriesUnit.SECONDS -> {
             val total = value.roundToInt()
             val h = total / 3600
@@ -197,16 +217,9 @@ class InsightEngine {
         SeriesUnit.COUNT -> value.roundToInt().toString()
     }
 
-    private fun clock(minutesOfDay: Double): String {
+    fun clock(minutesOfDay: Double): String {
         val m = minutesOfDay.roundToInt().coerceIn(0, 24 * 60 - 1)
         return "%02d:%02d".format(Locale.US, m / 60, m % 60)
-    }
-
-    private fun prettyDate(dayKey: String): String =
-        LocalDate.parse(dayKey).format(DateTimeFormatter.ofPattern("MMM d", Locale.US))
-
-    private companion object {
-        const val DAY_MS = 24 * 60 * 60 * 1000L
     }
 }
 
