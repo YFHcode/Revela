@@ -107,10 +107,13 @@ interface InsightDao {
     @Query("SELECT * FROM insights WHERE dedupe_key = :key LIMIT 1")
     suspend fun byDedupeKey(key: String): InsightEntity?
 
-    /** Refresh numbers/text of an existing insight, preserving created_ts and pin/dismiss state. */
+    /**
+     * Refresh numbers/text of an existing insight, preserving created_ts and
+     * pin/dismiss state. Clears llm_text: the narration referenced old numbers.
+     */
     @Query(
         "UPDATE insights SET stat_payload = :payload, text = :text, confidence = :confidence, " +
-            "window_start = :windowStart, window_end = :windowEnd WHERE id = :id",
+            "window_start = :windowStart, window_end = :windowEnd, llm_text = NULL WHERE id = :id",
     )
     suspend fun refresh(
         id: Long,
@@ -121,6 +124,15 @@ interface InsightDao {
         windowEnd: Long,
     )
 
+    @Query(
+        "SELECT * FROM insights WHERE dismissed = 0 AND llm_text IS NULL " +
+            "ORDER BY created_ts DESC LIMIT :limit",
+    )
+    suspend fun needingNarration(limit: Int): List<InsightEntity>
+
+    @Query("UPDATE insights SET llm_text = :llmText WHERE id = :id")
+    suspend fun setLlmText(id: Long, llmText: String)
+
     @Query("SELECT * FROM insights WHERE dismissed = 0 ORDER BY pinned DESC, created_ts DESC")
     fun feed(): Flow<List<InsightEntity>>
 
@@ -129,4 +141,16 @@ interface InsightDao {
 
     @Query("UPDATE insights SET pinned = :pinned WHERE id = :id")
     suspend fun setPinned(id: Long, pinned: Boolean)
+}
+
+@Dao
+interface LlmAuditDao {
+    @Insert
+    suspend fun insert(row: LlmAuditEntity)
+
+    @Query("SELECT * FROM llm_audit ORDER BY ts DESC LIMIT :limit")
+    fun recent(limit: Int): Flow<List<LlmAuditEntity>>
+
+    @Query("DELETE FROM llm_audit")
+    suspend fun clear()
 }

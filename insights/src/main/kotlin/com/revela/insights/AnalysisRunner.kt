@@ -12,6 +12,7 @@ import com.revela.analysis.SeriesBuilder
 import com.revela.core.db.DaySummaryEntity
 import com.revela.core.db.RevelaDatabase
 import com.revela.core.model.DayKeys
+import com.revela.insights.llm.OpenAiNarrator
 import java.time.Instant
 import java.time.ZoneId
 
@@ -24,6 +25,7 @@ import java.time.ZoneId
 class AnalysisRunner(
     private val db: RevelaDatabase,
     private val appLabel: (String) -> String,
+    private val narrator: OpenAiNarrator? = null,
     private val zone: () -> ZoneId = { ZoneId.systemDefault() },
 ) {
 
@@ -80,6 +82,19 @@ class AnalysisRunner(
         )
 
         InsightWriter(db).upsertAll(baseDrafts + crossDrafts + routineDrafts, now)
+
+        // L1 narration: rewrite a few un-narrated insights per pass. Failures
+        // (no key, offline, validation reject) simply leave the template.
+        narrator?.let { n ->
+            for (insight in db.insightDao().needingNarration(NARRATION_BATCH)) {
+                n.narrate(insight.type, insight.statPayload, insight.text)
+                    ?.let { db.insightDao().setLlmText(insight.id, it) }
+            }
+        }
+    }
+
+    private companion object {
+        const val NARRATION_BATCH = 5
     }
 
     private fun minuteOfDay(day: DaySummaryEntity, zoneId: ZoneId): Double? =

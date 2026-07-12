@@ -3,8 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-      D3: no INTERNET permission. CI fails the build if one sneaks into the
-      merged manifest before the M5 LLM layer intentionally adds it.
+      D3/§3.3: this module declares NO network permission. INTERNET merges in
+      exclusively from the :insights LLM layer, whose only remote host is
+      api.openai.com — CI enforces both.
     -->
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"

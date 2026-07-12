@@ -111,7 +111,7 @@ private fun InsightCard(
                 }
             }
             Spacer(Modifier.height(6.dp))
-            Text(insight.text, style = MaterialTheme.typography.bodyLarge)
+            Text(insight.llmText ?: insight.text, style = MaterialTheme.typography.bodyLarge)
 
             if (expanded) {
                 Spacer(Modifier.height(8.dp))

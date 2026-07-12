@@ -29,6 +29,7 @@ fun HomeScreen(
     container: AppContainer,
     onOpenDashboard: () -> Unit,
     onOpenInsights: () -> Unit,
+    onOpenChat: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenDebugLog: () -> Unit,
 ) {
@@ -88,6 +89,11 @@ fun HomeScreen(
         if (settings.silentWindowOver() || settings.devMode) {
             Button(onClick = onOpenInsights, modifier = Modifier.fillMaxWidth()) {
                 Text("Insights")
+            }
+            if (container.llmConfig.active) {
+                Button(onClick = onOpenChat, modifier = Modifier.fillMaxWidth()) {
+                    Text("Ask")
+                }
             }
         }
         if (!settings.dashboardUnlocked()) {

@@ -158,8 +158,24 @@ data class InsightEntity(
     @ColumnInfo(name = "window_end") val windowEnd: Long,
     /** The numbers behind the insight, as JSON. */
     @ColumnInfo(name = "stat_payload") val statPayload: String,
-    /** Natural-language text (templated in M3, LLM-narrated in M5). */
+    /** Templated natural-language text — always present, works offline. */
     val text: String,
+    /** LLM-narrated alternative (M5); null until narrated, cleared on refresh. */
+    @ColumnInfo(name = "llm_text") val llmText: String? = null,
     val dismissed: Boolean = false,
     val pinned: Boolean = false,
+)
+
+/**
+ * Audit log of every payload sent to the LLM API (D4/§3.3): the user can see
+ * exactly what left the device. Rows are written before the request is made.
+ */
+@Entity(tableName = "llm_audit", indices = [Index("ts")])
+data class LlmAuditEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val ts: Long,
+    /** What the request was for: "narration" or "query". */
+    val purpose: String,
+    /** The exact request body sent to the API. */
+    val payload: String,
 )

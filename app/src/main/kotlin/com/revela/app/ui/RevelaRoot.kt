@@ -12,7 +12,9 @@ sealed interface Screen {
     data object Home : Screen
     data object Dashboard : Screen
     data object Insights : Screen
+    data object Chat : Screen
     data object Settings : Screen
+    data object Audit : Screen
     data object DebugLog : Screen
 }
 
@@ -31,6 +33,7 @@ fun RevelaRoot(container: AppContainer) {
             container = container,
             onOpenDashboard = { screen = Screen.Dashboard },
             onOpenInsights = { screen = Screen.Insights },
+            onOpenChat = { screen = Screen.Chat },
             onOpenSettings = { screen = Screen.Settings },
             onOpenDebugLog = { screen = Screen.DebugLog },
         )
@@ -42,9 +45,18 @@ fun RevelaRoot(container: AppContainer) {
             container = container,
             onBack = { screen = Screen.Home },
         )
+        Screen.Chat -> ChatScreen(
+            container = container,
+            onBack = { screen = Screen.Home },
+        )
         Screen.Settings -> SettingsScreen(
             container = container,
             onBack = { screen = Screen.Home },
+            onOpenAudit = { screen = Screen.Audit },
+        )
+        Screen.Audit -> AuditScreen(
+            container = container,
+            onBack = { screen = Screen.Settings },
         )
         Screen.DebugLog -> DebugLogScreen(
             container = container,

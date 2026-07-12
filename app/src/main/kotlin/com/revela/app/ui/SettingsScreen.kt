@@ -14,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.revela.app.AppContainer
 import com.revela.capture.CaptureScheduler
@@ -32,12 +34,15 @@ import com.revela.insights.InsightsScheduler
 import com.revela.pipeline.RollupScheduler
 
 @Composable
-fun SettingsScreen(container: AppContainer, onBack: () -> Unit) {
+fun SettingsScreen(container: AppContainer, onBack: () -> Unit, onOpenAudit: () -> Unit) {
     val context = LocalContext.current
     val settings = container.settings
     var captureEnabled by remember { mutableStateOf(settings.captureEnabled) }
     var devMode by remember { mutableStateOf(settings.devMode) }
     var showWipeDialog by remember { mutableStateOf(false) }
+    var llmEnabled by remember { mutableStateOf(container.llmConfig.enabled) }
+    var hasKey by remember { mutableStateOf(!container.llmConfig.apiKey.isNullOrBlank()) }
+    var keyInput by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -82,6 +87,64 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit) {
                         settings.devMode = it
                     },
                 )
+            }
+        }
+
+        Card {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("AI narration & chat", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Optional. With your own OpenAI API key, insights get richer " +
+                        "wording and you can ask questions about your patterns. Only " +
+                        "aggregated numbers ever leave the device — see the audit " +
+                        "log below. Without a key, everything still works on " +
+                        "built-in wording.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (hasKey) {
+                    SettingSwitch(
+                        title = "Use AI features",
+                        description = "Off reverts to built-in wording instantly.",
+                        checked = llmEnabled,
+                        onCheckedChange = {
+                            llmEnabled = it
+                            container.llmConfig.enabled = it
+                        },
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            container.llmConfig.apiKey = null
+                            hasKey = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Remove API key")
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = keyInput,
+                        onValueChange = { keyInput = it },
+                        label = { Text("OpenAI API key") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Button(
+                        onClick = {
+                            container.llmConfig.apiKey = keyInput.trim()
+                            keyInput = ""
+                            hasKey = true
+                        },
+                        enabled = keyInput.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Save key")
+                    }
+                }
+                TextButton(onClick = onOpenAudit) {
+                    Text("What left the device →")
+                }
             }
         }
 

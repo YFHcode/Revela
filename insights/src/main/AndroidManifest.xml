@@ -1,1 +1,8 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      D3/§3.3: the ONLY module allowed to touch the network. The merged app
+      manifest gets INTERNET solely from here; the single permitted host is
+      LlmGateway.ENDPOINT, and CI fails on any other https:// literal.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

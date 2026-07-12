@@ -1,0 +1,103 @@
+package com.revela.insights.llm
+
+import com.revela.core.db.LlmAuditEntity
+import com.revela.core.db.RevelaDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+
+/**
+ * The single network chokepoint of the entire app (§3.3). Everything sent is
+ * audit-logged BEFORE the request, so the "what left the device" screen is
+ * complete by construction. Callers build message content exclusively from
+ * [LlmSafePayload] values — aggregates, never raw events or content.
+ */
+class LlmGateway(
+    private val config: LlmConfig,
+    private val db: RevelaDatabase,
+) {
+
+    /** One cleared unit of outbound content. Constructible only from aggregates. */
+    class LlmSafePayload private constructor(val content: String) {
+        companion object {
+            /** Insight type + stat payload + templated text — what an insight card shows. */
+            fun insightStats(type: String, statPayload: String, templateText: String) =
+                LlmSafePayload("Insight type: $type\nNumbers: $statPayload\nReference wording: $templateText")
+
+            /** The user's own typed question. */
+            fun userQuestion(question: String) = LlmSafePayload(question)
+
+            /** Rows from a whitelisted read-only query over rollup tables. */
+            fun queryResult(rowsJson: String) = LlmSafePayload(rowsJson)
+        }
+    }
+
+    data class Message(val role: String, val payload: LlmSafePayload)
+
+    /**
+     * POST /v1/chat/completions. Returns the first choice `message` object,
+     * or null on any failure (callers fall back to templates).
+     */
+    suspend fun chat(
+        purpose: String,
+        model: String,
+        systemPrompt: String,
+        messages: List<Message>,
+        tools: JSONArray? = null,
+        rawHistory: JSONArray? = null,
+    ): JSONObject? {
+        val key = config.apiKey
+        if (!config.enabled || key.isNullOrBlank()) return null
+
+        val messageArray = JSONArray()
+        messageArray.put(JSONObject().put("role", "system").put("content", systemPrompt))
+        rawHistory?.let { history ->
+            for (i in 0 until history.length()) messageArray.put(history.get(i))
+        }
+        for (m in messages) {
+            messageArray.put(JSONObject().put("role", m.role).put("content", m.payload.content))
+        }
+
+        val body = JSONObject()
+            .put("model", model)
+            .put("messages", messageArray)
+        tools?.let { body.put("tools", it) }
+
+        // Audit BEFORE sending: the log can never miss a payload (D4).
+        db.llmAuditDao().insert(
+            LlmAuditEntity(ts = System.currentTimeMillis(), purpose = purpose, payload = body.toString()),
+        )
+
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val connection = URL(ENDPOINT).openConnection() as HttpURLConnection
+                try {
+                    connection.requestMethod = "POST"
+                    connection.connectTimeout = 20_000
+                    connection.readTimeout = 60_000
+                    connection.doOutput = true
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.setRequestProperty("Authorization", "Bearer $key")
+                    connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+
+                    if (connection.responseCode !in 200..299) return@runCatching null
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    JSONObject(response)
+                        .getJSONArray("choices")
+                        .getJSONObject(0)
+                        .getJSONObject("message")
+                } finally {
+                    connection.disconnect()
+                }
+            }.getOrNull()
+        }
+    }
+
+    companion object {
+        /** The only remote host in the entire codebase — CI enforces this. */
+        const val ENDPOINT = "https://api.openai.com/v1/chat/completions"
+    }
+}

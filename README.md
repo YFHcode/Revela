@@ -10,6 +10,20 @@ milestone breakdown.
 
 ## Status
 
+**Milestone M5** — LLM layer (OpenAI, optional):
+
+- `LlmGateway` — the single network chokepoint of the whole app: every
+  request body is audit-logged *before* sending ("What left the device"
+  screen in Settings); the API key is Keystore-encrypted; `api.openai.com`
+  is the only remote host and CI enforces both containments
+- L1 narration: insights get richer wording, validated so every number in
+  the templated text survives verbatim — otherwise the template stays
+- L3 query chat ("Ask your mirror"): the model composes read-only SQL,
+  the app executes it locally through `SqlGuard` (SELECT-only, whitelisted
+  rollup tables, the raw `events` log is unreachable), and only aggregated
+  result rows return to the API
+- Fully optional: no key → templates and no network traffic at all
+
 **Milestone M4** — cross-stream lagged correlation + sequence mining:
 
 - Lagged cross-correlation engine (§8.9, the highest-leverage detector):

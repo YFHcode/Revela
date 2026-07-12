@@ -13,6 +13,10 @@ import com.revela.core.db.RoomEventLog
 import com.revela.insights.AnalysisRunner
 import com.revela.insights.InsightsGraph
 import com.revela.insights.InsightsScheduler
+import com.revela.insights.llm.LlmConfig
+import com.revela.insights.llm.LlmGateway
+import com.revela.insights.llm.OpenAiNarrator
+import com.revela.insights.llm.QueryEngine
 import com.revela.pipeline.PipelineGraph
 import com.revela.pipeline.RollupRunner
 import com.revela.pipeline.RollupScheduler
@@ -42,11 +46,18 @@ class AppContainer(context: Context) {
         PipelineGraph(rollupRunner = RollupRunner(database))
     }
 
+    val llmConfig: LlmConfig by lazy { LlmConfig(appContext) }
+
+    private val llmGateway: LlmGateway by lazy { LlmGateway(llmConfig, database) }
+
+    val queryEngine: QueryEngine by lazy { QueryEngine(database, llmGateway, llmConfig) }
+
     val insightsGraph: InsightsGraph by lazy {
         InsightsGraph(
             analysisRunner = AnalysisRunner(
                 db = database,
                 appLabel = ::appLabel,
+                narrator = OpenAiNarrator(llmGateway, llmConfig),
             ),
         )
     }

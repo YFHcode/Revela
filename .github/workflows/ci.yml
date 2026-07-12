@@ -21,17 +21,24 @@ jobs:
       - name: Build and test
         run: ./gradlew build
 
-      - name: Enforce no INTERNET permission (PLAN.md §6, D3)
+      - name: Enforce LLM-layer network containment (PLAN.md §3.3, D3/D4)
         run: |
-          manifest=$(find app/build -path "*merged*" -name AndroidManifest.xml | head -n1)
-          if [ -z "$manifest" ]; then
-            echo "Merged manifest not found"; exit 1
+          # INTERNET may be declared ONLY by the :insights module (the LLM layer).
+          if ! grep -q "android.permission.INTERNET" insights/src/main/AndroidManifest.xml; then
+            echo ":insights manifest must be the sole INTERNET declaration"; exit 1
           fi
-          if grep -q "android.permission.INTERNET" "$manifest"; then
-            echo "INTERNET permission found in merged manifest — forbidden until the M5 LLM layer adds it deliberately."
-            exit 1
+          offenders=$(grep -rl "android.permission.INTERNET" \
+            app/src capture/src core pipeline/src analysis/src 2>/dev/null || true)
+          if [ -n "$offenders" ]; then
+            echo "INTERNET declared outside :insights:"; echo "$offenders"; exit 1
           fi
-          echo "OK: no INTERNET permission in merged manifest."
+          # api.openai.com must be the only remote host referenced in code.
+          hosts=$(grep -rhoE 'https://[a-zA-Z0-9.-]+' --include='*.kt' . 2>/dev/null \
+            | sort -u | grep -v '^https://api.openai.com$' || true)
+          if [ -n "$hosts" ]; then
+            echo "Unexpected remote hosts in source:"; echo "$hosts"; exit 1
+          fi
+          echo "OK: network access contained to :insights → api.openai.com."
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
