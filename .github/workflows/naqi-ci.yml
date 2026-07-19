@@ -1,0 +1,46 @@
+# CI for the Naqi video-filtering platform (SPEC §12: "runs in CI on every
+# threshold/model/prompt change"). Scoped to the project subdirectory so it only
+# runs when that code changes.
+name: naqi-ci
+
+on:
+  push:
+    paths:
+      - "naqi-video-filter/**"
+      - ".github/workflows/naqi-ci.yml"
+  pull_request:
+    paths:
+      - "naqi-video-filter/**"
+      - ".github/workflows/naqi-ci.yml"
+
+defaults:
+  run:
+    working-directory: naqi-video-filter
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[api,dev]"
+
+      - name: Lint
+        run: ruff check analyzer api eval
+
+      - name: Tests
+        run: pytest
+
+      - name: Validate golden template
+        run: python -m eval.golden validate golden/TEMPLATE.json
+
+      - name: Eval release gate (fixture)
+        # Fails the build if the leakage/recall gates regress (SPEC §2.3, §12).
+        # Point at golden/clips.json once the real dataset lands.
+        run: python -m eval.harness tests/fixtures/golden_mini.json --level L3
