@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "naqi"
+version = "1.0.0.dev0"
+description = "Halal-compliant video filtering platform — detection pipeline, API, and evaluation."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Youssef El Fhayel" }]
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# API service (SPEC §6)
+api = [
+    "fastapi>=0.110",
+    "pydantic>=2.5",
+    "uvicorn[standard]>=0.27",
+    "python-multipart>=0.0.9",
+]
+# Real detectors + video I/O (SPEC §7.4) — heavy; installed on GPU workers only.
+ml = [
+    "torch>=2.2",
+    "torchvision>=0.17",
+    "open-clip-torch>=2.24",
+    "scenedetect[opencv]>=0.6.4",
+    "pillow>=10.0",
+    "numpy>=1.26",
+]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+naqi-analyze = "analyzer.cli:main"
+
+[tool.setuptools]
+packages = ["analyzer", "analyzer.models", "api", "api.routers", "eval"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# str+Enum is intentional (Pydantic-friendly, py3.11 baseline) — keep it.
+ignore = ["UP042"]

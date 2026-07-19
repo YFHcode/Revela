@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Test / tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Analysis / media artifacts (never commit user content)
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+*.m3u8
+*.ts
+analysis.json
+/renders/
+/uploads/
+/mezzanine/
+/data/
+!tests/fixtures/**
+
+# Models / weights
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Node / web
+web/node_modules/
+web/.next/
+web/out/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,49 @@
+# Naqi filtering rules — the contract between product, ML and QA (SPEC §4, App. A).
+# Strictness levels are PURE CONFIGURATION over one analysis pass: changing a
+# level never requires re-analysis. Thresholds are recall-biased for C1/C2.
+pipeline_version: "1.0.0"
+
+# Added to a category base_threshold. Lower threshold => more sensitive =>
+# more content flagged. So "high" sensitivity subtracts, "low" adds.
+sensitivity_offsets:
+  low: 0.10
+  medium: 0.0
+  high: -0.10
+
+categories:
+  C1:
+    name: explicit_sexual_activity
+    base_threshold: 0.55
+    min_segment_s: 0.0
+    never_drop: true
+  C2:
+    name: explicit_nudity
+    base_threshold: 0.50
+    never_drop: true
+  C3:
+    name: partial_nudity_attire
+    base_threshold: 0.70
+  C4:
+    name: kissing
+    base_threshold: 0.60
+  C5:
+    name: intimate_contact
+    base_threshold: 0.65
+  C6:
+    name: suggestive_bed_scene
+    base_threshold: 0.65
+    context_boost_near: [C1]
+    boost: 0.15
+
+post_processing:
+  snap_to_shots: true
+  pad_s: 0.5
+  merge_gap_s: 2.0
+  hysteresis_ratio: 0.6
+  drop_below_s: 0.5   # segments shorter than this are dropped unless never_drop
+
+# Which categories are CUT at each preset (SPEC §4.2). Everything else is kept.
+levels:
+  L1: [C1, C2]
+  L2: [C1, C2, C4, C6]
+  L3: [C1, C2, C3, C4, C5, C6]

@@ -1,0 +1,55 @@
+[
+  {
+    "video_id": "clip_kiss_01",
+    "duration_s": 24.0,
+    "shots": [
+      {"idx": 0, "start_s": 0.0, "end_s": 4.0},
+      {"idx": 1, "start_s": 4.0, "end_s": 8.0},
+      {"idx": 2, "start_s": 8.0, "end_s": 12.0},
+      {"idx": 3, "start_s": 12.0, "end_s": 16.0},
+      {"idx": 4, "start_s": 16.0, "end_s": 20.0},
+      {"idx": 5, "start_s": 20.0, "end_s": 24.0}
+    ],
+    "detections": [
+      {"shot_idx": 2, "category": "C4", "score": 0.88, "model": "mock", "model_version": "0", "sampled_fps": 4},
+      {"shot_idx": 3, "category": "C4", "score": 0.79, "model": "mock", "model_version": "0", "sampled_fps": 4}
+    ],
+    "truth": [
+      {"category": "C4", "start_s": 8.5, "end_s": 15.0}
+    ]
+  },
+  {
+    "video_id": "clip_explicit_01",
+    "duration_s": 40.0,
+    "shots": [
+      {"idx": 0, "start_s": 0.0, "end_s": 8.0},
+      {"idx": 1, "start_s": 8.0, "end_s": 16.0},
+      {"idx": 2, "start_s": 16.0, "end_s": 24.0},
+      {"idx": 3, "start_s": 24.0, "end_s": 32.0},
+      {"idx": 4, "start_s": 32.0, "end_s": 40.0}
+    ],
+    "detections": [
+      {"shot_idx": 1, "category": "C1", "score": 0.72, "model": "mock", "model_version": "0", "sampled_fps": 1},
+      {"shot_idx": 2, "category": "C1", "score": 0.95, "model": "mock", "model_version": "0", "sampled_fps": 1},
+      {"shot_idx": 3, "category": "C1", "score": 0.68, "model": "mock", "model_version": "0", "sampled_fps": 1},
+      {"shot_idx": 3, "category": "C6", "score": 0.60, "model": "mock", "model_version": "0", "sampled_fps": 1}
+    ],
+    "truth": [
+      {"category": "C1", "start_s": 9.0, "end_s": 31.0}
+    ]
+  },
+  {
+    "video_id": "clip_clean_01",
+    "duration_s": 30.0,
+    "shots": [
+      {"idx": 0, "start_s": 0.0, "end_s": 10.0},
+      {"idx": 1, "start_s": 10.0, "end_s": 20.0},
+      {"idx": 2, "start_s": 20.0, "end_s": 30.0}
+    ],
+    "detections": [
+      {"shot_idx": 0, "category": "C5", "score": 0.20, "model": "mock", "model_version": "0", "sampled_fps": 1},
+      {"shot_idx": 1, "category": "C4", "score": 0.15, "model": "mock", "model_version": "0", "sampled_fps": 1}
+    ],
+    "truth": []
+  }
+]
