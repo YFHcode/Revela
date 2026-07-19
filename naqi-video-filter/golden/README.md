@@ -22,6 +22,11 @@ extensions repo-wide.
 
 ## Labeling
 
+Use the **[Naqī Annotator](../tools/annotator/)** — a local UI that loads a
+video, lets you mark in/out points and pick categories, and exports this exact
+schema (video stays on your machine; only labels are exported). Or hand-edit
+JSON from `TEMPLATE.json`.
+
 Follow [`../docs/ANNOTATION_GUIDE.md`](../docs/ANNOTATION_GUIDE.md). Two
 annotators label independently; the owner adjudicates. Record `guide_version`
 and `annotators` on every clip.

@@ -99,6 +99,8 @@ naqi-video-filter/
 ├── eval/              # metrics + golden-set harness (SPEC §12)
 ├── tests/             # pytest suite (rules, aggregation, metrics, API flow)
 ├── web/               # frontend (planned — SPEC §5, M3)
+├── tools/annotator/   # local UI for labeling the golden set (SPEC §12)
+├── golden/            # evaluation dataset: labels only, never media
 ├── rules.yaml         # filtering contract (SPEC App. A)
 ├── docker/            # container images
 └── docs/SPEC.md       # full specification

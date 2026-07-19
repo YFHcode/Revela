@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naqī Annotator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='20' font-size='20'>%F0%9F%9B%A1</text></svg>">
+<style>
+  :root {
+    --bg: #0c0f14; --panel: #131820; --panel-2: #1a212c; --line: #263040;
+    --text: #e7edf3; --muted: #93a1b3; --dim: #63707f;
+    --accent: #45d6c0; --accent-ink: #06231e;
+    --c1:#f0546a; --c2:#f5883c; --c3:#e0c04a; --c4:#5db0f0; --c5:#a67ff0; --c6:#4ad3b0;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+  button { font-family: inherit; cursor: pointer; border: none; }
+  input, select, textarea { font-family: inherit; font-size: 14px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; display: flex; align-items: center; gap: 9px; }
+  .logo { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 7px;
+    background: rgba(69,214,192,.14); border: 1px solid rgba(69,214,192,.3); color: var(--accent); }
+  header .spacer { flex: 1; }
+  .hbtn { padding: 7px 13px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); font-size: 13px; font-weight: 500; }
+  .hbtn:hover { border-color: var(--accent); }
+  .hbtn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .hbtn.primary:hover { background: #63e0cc; }
+  .pill { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+
+  main { display: grid; grid-template-columns: 1.55fr 1fr; gap: 16px; padding: 16px 20px; align-items: start; max-width: 1500px; margin: 0 auto; }
+  .col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
+
+  /* video */
+  .stage { background: #000; border-radius: 10px; overflow: hidden; position: relative; aspect-ratio: 16/9; display: grid; place-items: center; }
+  video { width: 100%; height: 100%; display: none; }
+  .stage.has-video video { display: block; }
+  .dropzone { text-align: center; color: var(--muted); padding: 30px; }
+  .dropzone strong { color: var(--text); display: block; margin-bottom: 6px; }
+  .dropzone small { color: var(--dim); }
+
+  .timecode { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: .02em; }
+  .timecode .frac { color: var(--accent); }
+  .tc-row { display: flex; align-items: baseline; gap: 12px; margin-top: 12px; }
+  .tc-row .dur { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+
+  .transport { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tbtn { padding: 7px 10px; border-radius: 7px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); font-size: 12px; font-family: var(--mono); min-width: 42px; }
+  .tbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .seek { width: 100%; margin-top: 10px; accent-color: var(--accent); }
+
+  /* timeline */
+  .timeline { position: relative; height: 34px; margin-top: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: pointer; }
+  .tl-seg { position: absolute; top: 3px; bottom: 3px; border-radius: 3px; opacity: .85; }
+  .tl-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; pointer-events: none; }
+
+  /* marking */
+  .mark-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .05em; }
+  .inrow { display: flex; gap: 6px; }
+  .inrow input { flex: 1; width: 100%; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--text); font-family: var(--mono); }
+  .grabbtn { padding: 0 10px; border-radius: 7px; background: var(--panel-2); border: 1px solid var(--line); color: var(--accent); font-size: 15px; }
+  .grabbtn:hover { border-color: var(--accent); }
+
+  .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 4px; }
+  .cat { padding: 8px 6px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); text-align: left; font-size: 12px; position: relative; }
+  .cat .k { font-weight: 700; font-family: var(--mono); }
+  .cat .n { display: block; font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .cat[data-c] { border-left: 3px solid var(--dot); }
+  .cat.sel { background: var(--panel-2); box-shadow: inset 0 0 0 1.5px var(--dot); border-color: var(--dot); }
+  .cat:hover { border-color: var(--dot); }
+
+  .notes-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .chip { padding: 4px 10px; border-radius: 20px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+  .chip:hover, .chip.on { border-color: var(--accent); color: var(--accent); }
+  .note-input { width: 100%; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--text); }
+
+  .addbtn { width: 100%; margin-top: 12px; padding: 11px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; }
+  .addbtn:hover { background: #63e0cc; }
+  .addbtn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* metadata */
+  .meta-field { margin-bottom: 10px; }
+  .meta-field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .meta-field input { width: 100%; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--text); }
+  .meta-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cleanrow { display: flex; align-items: center; gap: 9px; margin-top: 6px; padding: 9px 11px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
+  .cleanrow input { width: 16px; height: 16px; accent-color: var(--accent); }
+  .cleanrow label { font-size: 13px; color: var(--text); }
+  .cleanrow small { color: var(--dim); display: block; font-size: 11px; }
+
+  /* segment list */
+  .seg-list { display: flex; flex-direction: column; gap: 7px; max-height: 260px; overflow-y: auto; }
+  .seg { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; border-left: 3px solid var(--dot); }
+  .seg .tag { font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--dot); width: 22px; }
+  .seg .rng { font-family: var(--mono); font-size: 12px; }
+  .seg .note { color: var(--dim); font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seg .x { background: none; color: var(--dim); font-size: 16px; padding: 0 4px; }
+  .seg .x:hover { color: var(--c1); }
+  .seg .go { background: none; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+  .seg .go:hover { color: var(--accent); }
+  .empty { color: var(--dim); font-size: 13px; text-align: center; padding: 18px; }
+
+  .set-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .set-actions button { flex: 1; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .btn-add-clip { background: var(--accent); color: var(--accent-ink); }
+  .btn-add-clip:hover { background: #63e0cc; }
+  .btn-add-clip:disabled { opacity: .4; cursor: not-allowed; }
+
+  .setinfo { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .setinfo .count { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  .clip-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; margin-bottom: 6px; font-size: 12px; }
+  .clip-row .id { flex: 1; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .clip-row .n { color: var(--dim); }
+  .clip-row .x { background: none; color: var(--dim); font-size: 15px; }
+  .clip-row .x:hover { color: var(--c1); }
+
+  kbd { font-family: var(--mono); font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--muted); }
+  .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+  .shortcuts div { display: flex; justify-content: space-between; gap: 8px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--accent-ink); padding: 10px 18px; border-radius: 9px; font-weight: 600; font-size: 13px; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="logo">🛡️</span> Naqī Annotator <span class="pill">golden-set labeling · guide v1.0</span></h1>
+  <div class="spacer"></div>
+  <input type="file" id="fileInput" accept="video/*" class="hidden">
+  <input type="file" id="importInput" accept="application/json,.json" class="hidden">
+  <button class="hbtn" id="loadVideoBtn">📹 Load video</button>
+  <button class="hbtn" id="importBtn">⇪ Import set</button>
+  <button class="hbtn primary" id="exportBtn">⬇ Export clips.json</button>
+</header>
+
+<main>
+  <!-- LEFT: player + marking -->
+  <div class="col">
+    <div class="card">
+      <div class="stage" id="stage">
+        <video id="video" preload="metadata"></video>
+        <div class="dropzone" id="dropzone">
+          <strong>Drop a video here, or “Load video”</strong>
+          <small>The file stays on your machine — nothing is uploaded. Only labels are exported.</small>
+        </div>
+      </div>
+
+      <div class="tc-row">
+        <div class="timecode"><span id="tcMain">0:00</span><span class="frac" id="tcFrac">.000</span></div>
+        <div class="dur">/ <span id="tcDur">--:--</span> · <span id="tcSecs">0.000</span>s</div>
+      </div>
+
+      <input type="range" class="seek" id="seek" min="0" max="1000" value="0">
+      <div class="timeline" id="timeline"><div class="tl-playhead" id="playhead" style="left:0"></div></div>
+
+      <div class="transport">
+        <button class="tbtn" data-seek="-5">«5s</button>
+        <button class="tbtn" data-seek="-1">«1s</button>
+        <button class="tbtn" data-frame="-1">‹fr</button>
+        <button class="tbtn" id="playBtn" style="min-width:64px">▶ Play</button>
+        <button class="tbtn" data-frame="1">fr›</button>
+        <button class="tbtn" data-seek="1">1s»</button>
+        <button class="tbtn" data-seek="5">5s»</button>
+        <span style="flex:1"></span>
+        <label class="pill" style="display:flex;align-items:center;gap:5px">rate
+          <select id="rate" style="background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 5px">
+            <option>0.5</option><option selected>1</option><option>1.5</option><option>2</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <!-- marking -->
+    <div class="card">
+      <h2>Mark a segment</h2>
+      <div class="mark-grid">
+        <div class="field">
+          <label>In (start s)</label>
+          <div class="inrow">
+            <input type="number" id="inTime" step="0.01" min="0" value="0">
+            <button class="grabbtn" id="grabIn" title="Set from playhead (I)">⤓</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Out (end s)</label>
+          <div class="inrow">
+            <input type="number" id="outTime" step="0.01" min="0" value="0">
+            <button class="grabbtn" id="grabOut" title="Set from playhead (O)">⤓</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:12px">
+        <label>Category</label>
+        <div class="cats" id="cats"></div>
+      </div>
+
+      <div class="field" style="margin-top:12px">
+        <label>Note (optional)</label>
+        <div class="notes-chips" id="noteChips"></div>
+        <input type="text" class="note-input" id="noteInput" placeholder="free text, e.g. “low light”">
+      </div>
+
+      <button class="addbtn" id="addSegBtn" disabled>+ Add segment (Enter)</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: metadata + segments + set -->
+  <div class="col">
+    <div class="card">
+      <h2>This clip</h2>
+      <div class="meta-field">
+        <label>video_id</label>
+        <input type="text" id="videoId" placeholder="clip_0001_kiss_prolonged">
+      </div>
+      <div class="meta-field">
+        <label>source (title, year, timecode — never the file)</label>
+        <input type="text" id="source" placeholder="Some Film (2019) — 00:41:10–00:41:35">
+      </div>
+      <div class="meta-2">
+        <div class="meta-field">
+          <label>duration_s</label>
+          <input type="number" id="duration" step="0.01" min="0" placeholder="auto from video">
+        </div>
+        <div class="meta-field">
+          <label>annotators</label>
+          <input type="text" id="annotators" placeholder="A, B">
+        </div>
+      </div>
+      <div class="cleanrow">
+        <input type="checkbox" id="cleanFlag">
+        <label for="cleanFlag">Clean / hard-negative clip
+          <small>No intimate content (e.g. cheek-kiss greeting). Exports empty truth.</small>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Segments in this clip (<span id="segCount">0</span>)</h2>
+      <div class="seg-list" id="segList"><div class="empty">No segments yet.</div></div>
+      <div class="set-actions">
+        <button class="btn-add-clip" id="addClipBtn" disabled>✓ Save clip to set</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="setinfo">
+        <h2 style="margin:0">Dataset</h2>
+        <span class="count"><span id="setCount">0</span> clips</span>
+      </div>
+      <div id="setList"><div class="empty">No clips saved yet.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Shortcuts</h2>
+      <div class="shortcuts">
+        <div><span>Play / pause</span><kbd>Space</kbd></div>
+        <div><span>Seek ±1s / ±5s</span><kbd>← →</kbd> / <kbd>⇧←→</kbd></div>
+        <div><span>Frame step</span><kbd>, .</kbd></div>
+        <div><span>Set In / Out</span><kbd>I</kbd> / <kbd>O</kbd></div>
+        <div><span>Pick category</span><kbd>1</kbd>–<kbd>6</kbd></div>
+        <div><span>Add segment</span><kbd>Enter</kbd></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CATS = [
+  { k:"C1", n:"explicit sex", color:"var(--c1)", hint:"Any sex act, simulated or real." },
+  { k:"C2", n:"explicit nudity", color:"var(--c2)", hint:"Exposed genitalia, breasts, buttocks." },
+  { k:"C3", n:"revealing attire", color:"var(--c3)", hint:"Lingerie, swimwear, shirtless." },
+  { k:"C4", n:"kissing", color:"var(--c4)", hint:"Lip-to-lip only. NOT cheek/family." },
+  { k:"C5", n:"intimate contact", color:"var(--c5)", hint:"Romantic embrace/caress. NOT family." },
+  { k:"C6", n:"suggestive/bed", color:"var(--c6)", hint:"Implied sex, seductive framing." },
+];
+const NOTE_CHIPS = ["peck","prolonged","familial","artwork","medical","documentary","breastfeeding","low light"];
+const GUIDE_VERSION = "1.0";
+
+const $ = id => document.getElementById(id);
+const video = $("video");
+let dataset = [];          // saved clips
+let truth = [];            // segments for the current clip
+let selectedCat = null;
+let activeNotes = new Set();
+
+// ---------- helpers ----------
+function fmt(t){ if(!isFinite(t)) return "0:00"; const m=Math.floor(t/60), s=Math.floor(t%60); const h=Math.floor(m/60); return h? `${h}:${String(m%60).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`; }
+function frac(t){ return "."+String(Math.floor((t%1)*1000)).padStart(3,"0"); }
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1600); }
+function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60); }
+function curDuration(){ const d=parseFloat($("duration").value); if(isFinite(d)&&d>0) return d; return isFinite(video.duration)? video.duration : 0; }
+function catColor(k){ return (CATS.find(c=>c.k===k)||{}).color || "var(--muted)"; }
+
+// ---------- category buttons ----------
+CATS.forEach((c,i)=>{
+  const b=document.createElement("button");
+  b.className="cat"; b.dataset.c=c.k; b.style.setProperty("--dot",c.color);
+  b.title=c.hint;
+  b.innerHTML=`<span class="k">${c.k}</span> <span class="n">${c.n}</span>`;
+  b.onclick=()=>selectCat(c.k);
+  $("cats").appendChild(b);
+});
+function selectCat(k){ selectedCat=k; document.querySelectorAll(".cat").forEach(el=>el.classList.toggle("sel",el.dataset.c===k)); refreshAddBtn(); }
+
+// ---------- note chips ----------
+NOTE_CHIPS.forEach(n=>{
+  const b=document.createElement("button"); b.className="chip"; b.textContent=n;
+  b.onclick=()=>{ if(activeNotes.has(n)){activeNotes.delete(n);b.classList.remove("on");} else {activeNotes.add(n);b.classList.add("on");} syncNoteInput(); };
+  $("noteChips").appendChild(b);
+});
+function syncNoteInput(){ const chips=[...activeNotes]; const free=$("noteInput").dataset.free||""; $("noteInput").value=[...chips, free].filter(Boolean).join(", "); }
+$("noteInput").addEventListener("input", e=>{ e.target.dataset.free=e.target.value; activeNotes.clear(); document.querySelectorAll("#noteChips .chip").forEach(c=>c.classList.remove("on")); });
+
+// ---------- video loading ----------
+function loadFile(file){
+  if(!file) return;
+  const url=URL.createObjectURL(file);
+  video.src=url; $("stage").classList.add("has-video"); $("dropzone").classList.add("hidden");
+  video.onloadedmetadata=()=>{ $("duration").value=video.duration.toFixed(2); $("tcDur").textContent=fmt(video.duration); if(!$("videoId").value) $("videoId").value=slug(file.name.replace(/\.[^.]+$/,"")); drawTimeline(); refreshAddBtn(); };
+}
+$("loadVideoBtn").onclick=()=>$("fileInput").click();
+$("fileInput").onchange=e=>loadFile(e.target.files[0]);
+["dragover","drop"].forEach(ev=>$("stage").addEventListener(ev,e=>e.preventDefault()));
+$("stage").addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith("video")) loadFile(f); });
+
+// ---------- transport ----------
+$("playBtn").onclick=togglePlay;
+function togglePlay(){ if(video.paused){video.play();$("playBtn").textContent="⏸ Pause";} else {video.pause();$("playBtn").textContent="▶ Play";} }
+video.addEventListener("timeupdate",updateTime);
+video.addEventListener("seeked",updateTime);
+$("rate").onchange=e=>video.playbackRate=parseFloat(e.target.value);
+document.querySelectorAll("[data-seek]").forEach(b=>b.onclick=()=>{ video.currentTime=Math.max(0,video.currentTime+parseFloat(b.dataset.seek)); });
+document.querySelectorAll("[data-frame]").forEach(b=>b.onclick=()=>{ video.currentTime=Math.max(0,video.currentTime+parseFloat(b.dataset.frame)*0.04); });
+$("seek").oninput=e=>{ if(isFinite(video.duration)) video.currentTime=(e.target.value/1000)*video.duration; };
+function updateTime(){ const t=video.currentTime||0; $("tcMain").textContent=fmt(t); $("tcFrac").textContent=frac(t); $("tcSecs").textContent=t.toFixed(3); if(isFinite(video.duration)){ const p=t/video.duration; $("seek").value=p*1000; $("playhead").style.left=(p*100)+"%"; } }
+
+// ---------- marking ----------
+$("grabIn").onclick=()=>{ $("inTime").value=(video.currentTime||0).toFixed(2); refreshAddBtn(); };
+$("grabOut").onclick=()=>{ $("outTime").value=(video.currentTime||0).toFixed(2); refreshAddBtn(); };
+["inTime","outTime"].forEach(id=>$(id).addEventListener("input",refreshAddBtn));
+function refreshAddBtn(){ const a=parseFloat($("inTime").value), b=parseFloat($("outTime").value); const ok=selectedCat && isFinite(a)&&isFinite(b)&&b>a; $("addSegBtn").disabled=!ok; }
+$("addSegBtn").onclick=addSegment;
+function addSegment(){
+  const a=parseFloat($("inTime").value), b=parseFloat($("outTime").value);
+  if(!(selectedCat && isFinite(a)&&isFinite(b)&&b>a)) return;
+  const dur=curDuration();
+  const start=Math.max(0,a), end=dur? Math.min(dur,b):b;
+  if(end<=start){ toast("End must be after start"); return; }
+  const note=$("noteInput").value.trim();
+  truth.push({ category:selectedCat, start_s:+start.toFixed(2), end_s:+end.toFixed(2), ...(note?{note}:{}) });
+  truth.sort((x,y)=>x.start_s-y.start_s);
+  activeNotes.clear(); $("noteInput").value=""; $("noteInput").dataset.free="";
+  document.querySelectorAll("#noteChips .chip").forEach(c=>c.classList.remove("on"));
+  renderSegs(); drawTimeline(); toast(`Added ${selectedCat} ${fmt(start)}–${fmt(end)}`);
+}
+
+function renderSegs(){
+  $("segCount").textContent=truth.length;
+  const list=$("segList");
+  if(!truth.length){ list.innerHTML='<div class="empty">No segments yet.</div>'; refreshClipBtn(); return; }
+  list.innerHTML="";
+  truth.forEach((s,i)=>{
+    const row=document.createElement("div"); row.className="seg"; row.style.setProperty("--dot",catColor(s.category));
+    row.innerHTML=`<span class="tag">${s.category}</span>
+      <button class="go" title="Seek">${fmt(s.start_s)}–${fmt(s.end_s)}</button>
+      <span class="note">${s.note||""}</span>
+      <button class="x" title="Delete">×</button>`;
+    row.querySelector(".go").onclick=()=>{ if(video.src) video.currentTime=s.start_s; };
+    row.querySelector(".x").onclick=()=>{ truth.splice(i,1); renderSegs(); drawTimeline(); };
+    list.appendChild(row);
+  });
+  refreshClipBtn();
+}
+
+function drawTimeline(){
+  const tl=$("timeline"); tl.querySelectorAll(".tl-seg").forEach(e=>e.remove());
+  const dur=curDuration(); if(!dur) return;
+  truth.forEach(s=>{ const el=document.createElement("div"); el.className="tl-seg"; el.style.left=(s.start_s/dur*100)+"%"; el.style.width=Math.max(0.6,(s.end_s-s.start_s)/dur*100)+"%"; el.style.background=catColor(s.category); tl.appendChild(el); });
+}
+$("timeline").onclick=e=>{ if(!video.src||!isFinite(video.duration))return; const r=e.currentTarget.getBoundingClientRect(); video.currentTime=((e.clientX-r.left)/r.width)*video.duration; };
+
+// ---------- clip → set ----------
+$("cleanFlag").onchange=refreshClipBtn;
+["videoId","duration"].forEach(id=>$(id).addEventListener("input",()=>{ refreshClipBtn(); drawTimeline(); }));
+function refreshClipBtn(){ const hasId=$("videoId").value.trim(); const clean=$("cleanFlag").checked; const dur=curDuration(); $("addClipBtn").disabled=!(hasId && dur>0 && (clean || truth.length>0)); }
+
+function currentClip(){
+  const ann=$("annotators").value.split(",").map(s=>s.trim()).filter(Boolean);
+  return {
+    video_id:$("videoId").value.trim(),
+    source:$("source").value.trim()||undefined,
+    duration_s:+curDuration().toFixed(2),
+    guide_version:GUIDE_VERSION,
+    ...(ann.length?{annotators:ann}:{}),
+    shots:[],           // filled by the analyzer in M1 (python -m analyzer analyze)
+    detections:[],
+    truth:$("cleanFlag").checked? [] : truth.slice(),
+  };
+}
+$("addClipBtn").onclick=()=>{
+  const clip=currentClip();
+  const idx=dataset.findIndex(c=>c.video_id===clip.video_id);
+  if(idx>=0){ dataset[idx]=clip; toast(`Updated ${clip.video_id}`); }
+  else { dataset.push(clip); toast(`Saved ${clip.video_id} to set`); }
+  renderSet(); newClip();
+};
+function newClip(){
+  truth=[]; selectedCat=null; activeNotes.clear();
+  ["videoId","source","noteInput"].forEach(id=>$(id).value="");
+  $("cleanFlag").checked=false; $("inTime").value=0; $("outTime").value=0;
+  document.querySelectorAll(".cat").forEach(e=>e.classList.remove("sel"));
+  document.querySelectorAll("#noteChips .chip").forEach(c=>c.classList.remove("on"));
+  renderSegs(); drawTimeline(); refreshAddBtn();
+}
+
+function renderSet(){
+  $("setCount").textContent=dataset.length;
+  const el=$("setList");
+  if(!dataset.length){ el.innerHTML='<div class="empty">No clips saved yet.</div>'; return; }
+  el.innerHTML="";
+  dataset.forEach((c,i)=>{
+    const row=document.createElement("div"); row.className="clip-row";
+    row.innerHTML=`<span class="id">${c.video_id}</span><span class="n">${c.truth.length? c.truth.length+" seg" : "clean"}</span><button class="x">×</button>`;
+    row.querySelector(".id").onclick=()=>loadClip(i);
+    row.querySelector(".id").style.cursor="pointer";
+    row.querySelector(".x").onclick=()=>{ dataset.splice(i,1); renderSet(); };
+    el.appendChild(row);
+  });
+}
+function loadClip(i){
+  const c=dataset[i]; $("videoId").value=c.video_id; $("source").value=c.source||"";
+  $("duration").value=c.duration_s; $("annotators").value=(c.annotators||[]).join(", ");
+  $("cleanFlag").checked=c.truth.length===0 && (!c.truth || c.truth.length===0);
+  truth=(c.truth||[]).slice(); renderSegs(); drawTimeline(); refreshClipBtn();
+  toast(`Editing ${c.video_id} — Save clip to set to update`);
+}
+
+// ---------- import / export ----------
+$("importBtn").onclick=()=>$("importInput").click();
+$("importInput").onchange=e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); if(Array.isArray(data)){ dataset=data.map(normalize); renderSet(); toast(`Imported ${dataset.length} clips`);} else toast("Expected a JSON array"); }catch(err){ toast("Invalid JSON"); } }; r.readAsText(f); };
+function normalize(c){ return { video_id:c.video_id, source:c.source, duration_s:c.duration_s, guide_version:c.guide_version||GUIDE_VERSION, annotators:c.annotators, shots:c.shots||[], detections:c.detections||[], truth:c.truth||[] }; }
+
+$("exportBtn").onclick=()=>{
+  let out=dataset.slice();
+  const cur=currentClip();
+  if(cur.video_id && (cur.truth.length || $("cleanFlag").checked) && !dataset.find(c=>c.video_id===cur.video_id)){
+    if(confirm(`Include the current unsaved clip “${cur.video_id}” in the export?`)) out.push(cur);
+  }
+  if(!out.length){ toast("Nothing to export"); return; }
+  const clean=out.map(c=>{ const o={video_id:c.video_id}; if(c.source)o.source=c.source; o.duration_s=c.duration_s; o.guide_version=c.guide_version||GUIDE_VERSION; if(c.annotators&&c.annotators.length)o.annotators=c.annotators; o.shots=c.shots||[]; o.detections=c.detections||[]; o.truth=c.truth||[]; return o; });
+  const blob=new Blob([JSON.stringify(clean,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="clips.json"; a.click();
+  toast(`Exported ${clean.length} clips`);
+};
+
+// expose a tiny hook for automated testing / scripting
+window.__naqi = { get dataset(){return dataset;}, currentClip, addSegment, selectCat,
+  _set:(id,v)=>{$(id).value=v;}, _truth:()=>truth };
+
+// ---------- keyboard ----------
+document.addEventListener("keydown",e=>{
+  if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return;
+  if(e.key===" "){ e.preventDefault(); if(video.src) togglePlay(); }
+  else if(e.key==="ArrowRight"){ e.preventDefault(); video.currentTime+= e.shiftKey?5:1; }
+  else if(e.key==="ArrowLeft"){ e.preventDefault(); video.currentTime-= e.shiftKey?5:1; }
+  else if(e.key===","){ video.currentTime=Math.max(0,video.currentTime-0.04); }
+  else if(e.key==="."){ video.currentTime+=0.04; }
+  else if(e.key.toLowerCase()==="i"){ $("grabIn").click(); }
+  else if(e.key.toLowerCase()==="o"){ $("grabOut").click(); }
+  else if(e.key>="1"&&e.key<="6"){ selectCat("C"+e.key); }
+  else if(e.key==="Enter"){ if(!$("addSegBtn").disabled) addSegment(); }
+});
+
+renderSegs(); renderSet();
+</script>
+</body>
+</html>
